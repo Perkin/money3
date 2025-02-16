@@ -12,7 +12,7 @@ export function useIndexedDB(): IDBPDatabase | null {
                 setDb(database);
             } catch (error) {
                 // eslint-disable-next-line no-console
-                console.error("Ошибка инициализации БД:", error);
+                console.error('Ошибка инициализации БД:', error);
             }
         })();
     }, []);

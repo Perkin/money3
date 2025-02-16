@@ -28,7 +28,12 @@ async function getPayments(filter: PaymentFilter = {}): Promise<Payment[]> {
     }
 }
 
-async function addPayment(investId: number, investMoney: number, incomeRatio: number, paymentDate: Date): Promise<number> {
+async function addPayment(
+    investId: number,
+    investMoney: number,
+    incomeRatio: number,
+    paymentDate: Date
+): Promise<number> {
     const db = await getDB();
     const transaction = db.transaction('payments', 'readwrite');
     const store = transaction.objectStore('payments');
@@ -38,7 +43,7 @@ async function addPayment(investId: number, investMoney: number, incomeRatio: nu
         money: Math.round(investMoney * incomeRatio),
         paymentDate,
         isPayed: 0,
-        updatedAt: new Date()
+        updatedAt: new Date(),
     };
 
     return store.add(payment);

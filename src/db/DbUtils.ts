@@ -25,7 +25,12 @@ async function calculatePayments(): Promise<void> {
         lastPaymentDate.setMonth(lastPaymentDate.getMonth() + 1);
         lastPaymentDate.setHours(0, 0, 0);
 
-        await addPayment(invest.id!, invest.money, invest.incomeRatio || defaultIncomeRatio, lastPaymentDate);
+        await addPayment(
+            invest.id!,
+            invest.money,
+            invest.incomeRatio || defaultIncomeRatio,
+            lastPaymentDate
+        );
     }
 }
 
@@ -40,7 +45,10 @@ async function exportData(investFilter = {}, paymentFilter = {}): Promise<object
     return { invests, payments };
 }
 
-async function importData(importData: { invests: object[], payments: object[] }, cleanImport: boolean = false): Promise<void> {
+async function importData(
+    importData: { invests: object[]; payments: object[] },
+    cleanImport: boolean = false
+): Promise<void> {
     const db = await getDB();
     const transaction = db.transaction(['invests', 'payments'], 'readwrite');
     const investStore = transaction.objectStore('invests');

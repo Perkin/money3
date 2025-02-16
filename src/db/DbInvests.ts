@@ -40,7 +40,7 @@ async function addInvest(money: number, incomeRatio: number, createdDate: Date):
         createdDate,
         closedDate: null,
         isActive: 1,
-        updatedAt: new Date()
+        updatedAt: new Date(),
     };
 
     return store.add(invest);
