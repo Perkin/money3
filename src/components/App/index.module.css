@@ -1,0 +1,41 @@
+:root {
+    --container-width: 600px;
+    --item-width: calc(var(--container-width) / 4 + 10px);
+}
+
+@media (max-width: 600px) {
+    :root {
+        --container-width: 95vw;
+    }
+
+    body {
+        margin: 5px;
+    }
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    background-color: #000;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    height: 100%;
+}
+
+.container {
+    width: var(--container-width);
+    margin: 10px auto;
+    position: relative;
+    height: 100%;
+}
+
+h1 {
+    text-align: left;
+    padding-top: 15px;
+    height: 80px;
+    display: block;
+}

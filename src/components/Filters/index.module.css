@@ -1,0 +1,13 @@
+.dataFilter {
+    clear: both;
+    overflow: auto;
+}
+
+.filterItem {
+    margin-right: 15px;
+    float: left;
+}
+
+.filterItem input {
+    margin-right: 3px;
+}

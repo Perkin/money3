@@ -1,0 +1,38 @@
+.dataItem {
+    display: table-row;
+    width: 100%;
+    background-color: #333;
+    font-weight: bold;
+    border-top: 1px solid black;
+}
+
+.dataItem.even {
+    background-color: #444;
+}
+
+.dataItem.closed {
+    color: #AF4C50;
+}
+
+.dataItem > div {
+    display: table-cell;
+    padding: 5px;
+    width: var(--item-width);
+}
+
+.dataItem .itemMoney {
+    width: calc(var(--item-width) + 50px);
+}
+
+.dataItem .itemActions {
+    width: calc(var(--item-width) - 50px);
+    text-align: center;
+}
+
+.investCloseButton {
+    padding: 3px;
+    background-color: #AF4C50;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}

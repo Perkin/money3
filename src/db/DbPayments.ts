@@ -1,4 +1,5 @@
 import { getDB } from './Db';
+import { Invest } from '@/db/DbInvests.ts';
 
 interface Payment {
     id?: number;
@@ -49,7 +50,7 @@ async function addPayment(
     return store.add(payment);
 }
 
-async function closePayment(paymentId: number): Promise<void> {
+async function closePayment(paymentId: number): Promise<number> {
     const db = await getDB();
     const transaction = db.transaction('payments', 'readwrite');
     const store = transaction.objectStore('payments');
@@ -59,7 +60,8 @@ async function closePayment(paymentId: number): Promise<void> {
 
     payment.isPayed = 1;
     payment.updatedAt = new Date();
-    await store.put(payment);
+
+    return store.put(payment);
 }
 
-export { Payment, getPayments, addPayment, closePayment };
+export { PaymentFilter, Payment, getPayments, addPayment, closePayment };

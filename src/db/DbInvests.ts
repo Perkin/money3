@@ -57,7 +57,8 @@ async function closeInvest(investId: number): Promise<void> {
     invest.isActive = 0;
     invest.closedDate = new Date();
     invest.updatedAt = new Date();
-    await store.put(invest);
+
+    return store.put(invest);
 }
 
-export { Invest, getInvests, addInvest, closeInvest };
+export { InvestFilter, Invest, getInvests, addInvest, closeInvest };

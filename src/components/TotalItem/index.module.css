@@ -1,0 +1,30 @@
+.dataItem {
+    display: table-row;
+    width: 100%;
+    background-color: #333;
+    border-top: 1px solid black;
+    font-weight: bold;
+}
+
+.dataItem > div {
+    display: table-cell;
+    padding: 5px;
+    width: var(--item-width);
+}
+
+.dataItem .itemMoney {
+    width: calc(var(--item-width) + 50px);
+}
+
+.dataItem .itemActions {
+    width: calc(var(--item-width) - 50px);
+    text-align: center;
+}
+
+.debt {
+    color: #AF4C50;
+}
+
+.debt .itemMoney {
+    color: red;
+}
