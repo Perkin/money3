@@ -9,7 +9,7 @@ import RegisterPopup from '@/components/Popup/RegisterPopup.tsx';
 import ImportPopup from '@/components/Popup/ImportPopup.tsx';
 import { exportData, syncUpdates } from '@/db/DbUtils.ts';
 
-const Menu = ({onUpdate}) => {
+const Menu = () => {
     const { user, logout } = useUser();
 
     const [isMenuVisible, setMenuVisible] = useState(false);
@@ -97,7 +97,7 @@ const Menu = ({onUpdate}) => {
             )}
             {isLoginPopupActive && (<LoginPopup onClose={() => setLoginPopupActive(false)}/>)}
             {isRegisterPopupActive && (<RegisterPopup onClose={() => setRegisterPopupActive(false)}/>)}
-            {isImportPopupActive && (<ImportPopup onUpdate={onUpdate} onClose={() => setImportPopupActive(false)}/>)}
+            {isImportPopupActive && (<ImportPopup onClose={() => setImportPopupActive(false)}/>)}
         </div>
     );
 };

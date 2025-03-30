@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import styles from './Popup.module.css';
 import { importData } from '@/db/DbUtils.ts';
 
-const ImportPopup = ({onClose, onUpdate}) => {
+const ImportPopup = ({onClose}) => {
     const [json, setJson] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -15,8 +15,9 @@ const ImportPopup = ({onClose, onUpdate}) => {
             const importJson = JSON.parse(trimmedJson);
             await importData(importJson, true);
             toast.success('Импорт завершен');
-            onUpdate();
             onClose();
+
+            window.dispatchEvent(new CustomEvent('fetchInvests'));
         } catch (err) {
             toast.error('Не удалось распарсить данные');
         }

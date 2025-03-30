@@ -4,7 +4,7 @@ import CurrentDateItem from '@/components/CurrentDateItem';
 import { useCallback, useMemo, useState } from 'react';
 import TotalItem from '@/components/TotalItem';
 
-const InvestsTable = ({ invests, onCloseInvest, showPayed }) => {
+const InvestsTable = ({ invests, showPayed }) => {
     const today = (new Date()).getDate();
 
     const [totalInvests, setTotalInvests] = useState<Record<number, number>>({});
@@ -84,7 +84,7 @@ const InvestsTable = ({ invests, onCloseInvest, showPayed }) => {
                             <InvestItem
                                 key={invest.id}
                                 invest={invest}
-                                onCloseInvest={() => {removeInvestMoney(invest.id); onCloseInvest(); }}
+                                onCloseInvest={() => {removeInvestMoney(invest.id); }}
                                 showPayed={showPayed}
                                 isEven={index % 2 == 0}
                                 addInvestMoney={addInvestMoney}

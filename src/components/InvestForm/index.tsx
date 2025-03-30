@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { addInvest } from '@/db/DbInvests.ts';
 import { calculatePayments } from '@/db/DbUtils.ts';
 
-const InvestForm = ({onAddInvest}) => {
+const InvestForm = () => {
     const formRef = useRef<HTMLFormElement | null>(null);
 
     const [money, setMoney] = useState<number>(0);
@@ -30,7 +30,7 @@ const InvestForm = ({onAddInvest}) => {
                 formRef.current?.reset();
                 toast.success('Инвестиция добавлена');
 
-                onAddInvest();
+                window.dispatchEvent(new CustomEvent('fetchInvests'));
             } else {
                 toast.error('Не удалось добавить инвестицию');
             }

@@ -52,6 +52,7 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                 // await updateRemoteData();
 
                 onCloseInvest();
+                window.dispatchEvent(new CustomEvent('fetchInvests'));
             } else {
                 toast.error('Не удалось закрыть инвестицию');
             }

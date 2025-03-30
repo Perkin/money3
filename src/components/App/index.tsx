@@ -32,6 +32,8 @@ const App = () => {
         fetchInvests().catch((error) => {
             console.error("Ошибка в fetchInvests:", error);
         });
+        window.addEventListener('fetchInvests', fetchInvests);
+        return () => window.removeEventListener('fetchInvests', fetchInvests);
     }, [fetchInvests]);
 
     return (
@@ -49,8 +51,8 @@ const App = () => {
             <div className={styles.container}>
                 <h1>Инвестиции</h1>
 
-                <Menu onUpdate={fetchInvests} />
-                <InvestForm onAddInvest={fetchInvests} />
+                <Menu />
+                <InvestForm />
                 <Filters
                     activeFilter={activeFilter}
                     setActiveFilter={setActiveFilter}
@@ -59,7 +61,6 @@ const App = () => {
                 />
                 <InvestsTable
                     invests={invests}
-                    onCloseInvest={fetchInvests}
                     showPayed={showPayed}
                 />
             </div>
