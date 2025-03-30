@@ -2,7 +2,7 @@ import { getDB } from './Db';
 import { getInvests } from './DbInvests';
 import { getPayments, addPayment } from './DbPayments';
 import { toast } from 'react-toastify';
-import { useUser } from '@/components/UserContext.tsx';
+import { API_URL } from '@/config.ts';
 
 export const defaultIncomeRatio = 0.05;
 
@@ -87,22 +87,18 @@ async function syncUpdates(): Promise<void> {
     toast.done(toastSyncUpdates)
 
     if (result && result.status == 'success') {
-        await updateLocalData(result);
+        await importData(result);
+        toast.info('Обновления применены');
+
+        window.dispatchEvent(new CustomEvent('fetchInvests'));
     } else {
         if (result && result.status == 'no_updates') {
             toast.info('Обновлений нет');
         }
-        await updateRemoteData();
+        //await updateRemoteData();
     }
 
     localStorage.setItem('lastSyncDate', new Date().toISOString());
-}
-
-async function updateLocalData(result: any): Promise<void> {
-    await dbImportData(result);
-
-    toast('Новые данные загружены');
-    setTimeout(() => document.location.reload(), 1000);
 }
 
 async function updateRemoteData(): Promise<void> {
@@ -134,32 +130,34 @@ async function updateRemoteData(): Promise<void> {
 }
 
 async function sendRequest(url: string, method: string = 'GET', json: any = null): Promise<any> {
-    const { user } = useUser();
+    const token = localStorage.getItem('token');
+    if (!token) {
+        throw new Error("Токен не найден.");
+    }
 
     try {
-        const response = await fetch(api_url + url, {
+        const response = await fetch(API_URL + url, {
             method: method,
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${authUser.token}`
+                "Authorization": `Bearer ${token}`
             },
             body: json ? JSON.stringify(json) : null
         });
 
         if (!response.ok) {
             if (response.status == 401) {
-                toastError('Неавторизованный запрос, возможно истекло время токена, просто авторизуйтесь снова', 7000);
-                await logout();
+                toast.error('Неавторизованный запрос, возможно истекло время токена, просто авторизуйтесь снова');
                 return null;
             }
-            toastError(`Ошибка: ${response.statusText}`);
+            toast.error(`Ошибка: ${response.statusText}`);
             console.error(`Ошибка:`, response);
             return null;
         }
 
         return response.json();
     } catch (error: unknown) {
-        toastError(`"Неизвестная ошибка`);
+        toast.error(`"Неизвестная ошибка`);
         console.error("Неизвестная ошибка:", error);
     }
 
