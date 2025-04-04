@@ -28,7 +28,7 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
         const filteredPayments = allPayments.filter(payment => showPayed || !payment.isPayed);
 
         filteredPayments.forEach((payment: Payment) => {
-            if (!payment.isPayed && payment.paymentDate < today) {
+            if (!payment.isPayed && payment.paymentDate < today && invest.id !== undefined) {
                 addDebtMoney(invest.id, payment.money);
             }
         })
@@ -37,7 +37,7 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
     }, [showPayed, invest, addDebtMoney]);
 
     useEffect(() => {
-        fetchPayments().catch((error) => {
+        fetchPayments().catch((error: Error) => {
             console.error("Ошибка в fetchPayments:", error);
         });
     }, [fetchPayments]);
@@ -49,8 +49,8 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
         }
     }, [invest, addInvestMoney, addIncomeMoney]);
 
-    const handleCloseInvest = async (investId: number) => {
-        if (!confirm('Точно закрыть?')) {
+    const handleCloseInvest = async (investId: number | undefined) => {
+        if (!investId || !confirm('Точно закрыть?')) {
             return;
         }
 
@@ -97,22 +97,24 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                         <button
                             className={styles.investCloseButton}
                             title="Закрыть инвестицию"
-                            onClick={() => handleCloseInvest(invest.id)}
+                            onClick={() => invest.id !== undefined && handleCloseInvest(invest.id)}
                         >
                             X
                         </button>
                     )}
                 </div>
             </div>
-            {payments.map((payment: Payment) => (
-                <PaymentItem
-                    key={payment.id}
-                    payment={payment}
-                    isEven={isEven}
-                    isDebt={!payment.isPayed && payment.paymentDate < today}
-                    onClosePayment={fetchPayments}
-                />
-            ))}
+            {payments.map((payment: Payment) => 
+                payment.id !== undefined ? (
+                    <PaymentItem
+                        key={payment.id}
+                        payment={payment}
+                        isEven={isEven}
+                        isDebt={!payment.isPayed && payment.paymentDate < today}
+                        onClosePayment={fetchPayments}
+                    />
+                ) : null
+            )}
         </>
     );
 };
