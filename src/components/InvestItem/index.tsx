@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from './index.module.css';
-import { closeInvest, Invest } from '@/db/DbInvests.ts';
+import { closeInvest, Invest, rollbackLastPayment } from '@/db/DbInvests.ts';
 import { closePayment, getPayments, Payment, PaymentFilter } from '@/db/DbPayments.ts';
 import { toast } from 'react-toastify';
 import PaymentItem from '@/components/PaymentItem';
 import { defaultIncomeRatio, updateRemoteData } from '@/db/DbUtils';
 import { formatDate, formatMoney } from '@/utils/formatUtils.ts';
+import EditInvestForm from '@/components/EditInvestForm';
+import Popup from '@/components/Popup';
 
 interface InvestItemProps {
     invest: Invest;
@@ -19,7 +21,7 @@ interface InvestItemProps {
 
 const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, addIncomeMoney, addDebtMoney}: InvestItemProps) => {
     const today = new Date();
-
+    const [showEditForm, setShowEditForm] = useState(false);
     const [payments, setPayments] = useState<Payment[]>([]);
 
     const fetchPayments = useCallback(async () => {
@@ -86,6 +88,21 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
         }
     }
 
+    const handleRollbackPayment = async () => {
+        if (!invest.id || !confirm('Откатить последний неоплаченный платёж?')) {
+            return;
+        }
+
+        try {
+            await rollbackLastPayment(invest.id);
+            toast.success('Платёж успешно откачен');
+            await fetchPayments();
+            await updateRemoteData();
+        } catch (error) {
+            toast.error(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
+    };
+
     return (
         <>
             <div className={`${styles.dataItem} ${isEven ? styles.even : ''} ${invest.closedDate ? styles.closed : ''}`}>
@@ -94,16 +111,43 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                 <div className={styles.itemMoney}>{formatMoney(invest.money)} ({(100 * (invest.incomeRatio || defaultIncomeRatio))}%)</div>
                 <div className={styles.itemActions}>
                     {invest.isActive == 1 && (
-                        <button
-                            className={styles.investCloseButton}
-                            title="Закрыть инвестицию"
-                            onClick={() => invest.id !== undefined && handleCloseInvest(invest.id)}
-                        >
-                            X
-                        </button>
+                        <>
+                            <button
+                                className={styles.investRollbackButton}
+                                title="Откатить последний платёж"
+                                onClick={handleRollbackPayment}
+                            >
+                                ↺
+                            </button>
+                            <button
+                                className={styles.investEditButton}
+                                title="Редактировать инвестицию"
+                                onClick={() => setShowEditForm(true)}
+                            >
+                                ✎
+                            </button>
+                            <button
+                                className={styles.investCloseButton}
+                                title="Закрыть инвестицию"
+                                onClick={() => invest.id !== undefined && handleCloseInvest(invest.id)}
+                            >
+                                ✕
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
+            {showEditForm && (
+                <Popup onClose={() => setShowEditForm(false)}>
+                    <EditInvestForm 
+                        invest={invest} 
+                        onClose={() => {
+                            setShowEditForm(false);
+                            window.dispatchEvent(new CustomEvent('fetchInvests'));
+                        }} 
+                    />
+                </Popup>
+            )}
             {payments.map((payment: Payment) => 
                 payment.id !== undefined ? (
                     <PaymentItem

@@ -1,0 +1,78 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.popup {
+    background: #333;
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    width: calc(var(--container-width) * 0.9);
+    max-width: 90%;
+    max-height: 90%;
+    overflow: auto;
+    border: 1px solid #444;
+}
+
+.popup input,
+.popup select {
+    background: #444;
+    border: 1px solid #555;
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.popup input:focus,
+.popup select:focus {
+    outline: none;
+    border-color: #2196f3;
+}
+
+.popup label {
+    color: #ccc;
+}
+
+.popup button[type="submit"] {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.popup button[type="button"] {
+    background: #AF4C50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.popup button[type="submit"]:hover {
+    background: #388e3c;
+}
+
+.popup button[type="button"]:hover {
+    background: #d32f2f;
+}
+
+@media (max-width: 480px) {
+    .popup {
+        padding: 15px;
+        width: 95%;
+    }
+} 

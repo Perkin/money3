@@ -48,9 +48,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Синхронизируем данные при появлении пользователя
     useEffect(() => {
         if (user) {
-            syncUpdates().catch((error) => {
-                console.error("Ошибка при синхронизации:", error);
-            });
+            syncUpdates()
+                .then(() => {
+                    // После успешной синхронизации обновляем список инвестиций
+                    window.dispatchEvent(new CustomEvent('fetchInvests'));
+                })
+                .catch((error) => {
+                    console.error("Ошибка при синхронизации:", error);
+                });
         }
     }, [user]); // Запускается только при изменении user
 

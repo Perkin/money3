@@ -54,5 +54,5 @@ async function getDB(): Promise<IDBPDatabase> {
 
     return dbInstance;
 }
-
 export { getDB };
+

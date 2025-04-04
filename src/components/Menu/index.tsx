@@ -4,10 +4,11 @@ import MenuButton from '@/components/MenuButton';
 import User from '@/components/User';
 import { useUser } from '../UserContext';
 import { toast } from 'react-toastify';
-import LoginPopup from '@/components/Popup/LoginPopup.tsx';
-import RegisterPopup from '@/components/Popup/RegisterPopup.tsx';
-import ImportPopup from '@/components/Popup/ImportPopup.tsx';
+import ImportForm from '@/components/ImportForm';
 import { exportData, syncUpdates } from '@/db/DbUtils.ts';
+import Popup from '../Popup';
+import LoginForm from '../LoginForm';
+import RegisterForm from '../RegisterForm';
 
 const Menu = () => {
     const { user, logout } = useUser();
@@ -39,12 +40,17 @@ const Menu = () => {
         setMenuVisible(prevState => !prevState);
     };
 
-    const [isLoginPopupActive, setLoginPopupActive] = useState(false);
-    const [isRegisterPopupActive, setRegisterPopupActive] = useState(false);
     const [isImportPopupActive, setImportPopupActive] = useState(false);
+    const [showLoginForm, setShowLoginForm] = useState(false);
+    const [showRegisterForm, setShowRegisterForm] = useState(false);
 
     const handleExport = async () => {
-        await exportData();
+        try {
+            await exportData();
+            toast.success('Данные успешно экспортированы');
+        } catch (error) {
+            toast.error(`Ошибка экспорта: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
     }
 
     const handleImport = () => {
@@ -53,18 +59,13 @@ const Menu = () => {
     }
 
     const handleSyncUpdates = async () => {
-        await syncUpdates();
+        try {
+            await syncUpdates();
+            toast.success('Данные успешно синхронизированы');
+        } catch (error) {
+            toast.error(`Ошибка синхронизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
     }
-
-    const handleLogin = () => {
-        setMenuVisible(false);
-        setLoginPopupActive(true);
-    };
-
-    const handleRegister = () => {
-        setMenuVisible(false);
-        setRegisterPopupActive(true);
-    };
 
     const handleLogout = () => {
         logout();
@@ -88,16 +89,34 @@ const Menu = () => {
                         )
                         : (
                             <>
-                                <MenuButton onClick={handleRegister}>Регистрация</MenuButton>
-                                <MenuButton onClick={handleLogin}>Авторизация</MenuButton>
+                                <MenuButton onClick={() => setShowRegisterForm(true)}>Регистрация</MenuButton>
+                                <MenuButton onClick={() => setShowLoginForm(true)}>Авторизация</MenuButton>
                             </>
                         )
                     }
                 </div>
             )}
-            {isLoginPopupActive && (<LoginPopup onClose={() => setLoginPopupActive(false)}/>)}
-            {isRegisterPopupActive && (<RegisterPopup onClose={() => setRegisterPopupActive(false)}/>)}
-            {isImportPopupActive && (<ImportPopup onClose={() => setImportPopupActive(false)}/>)}
+            {showLoginForm && (
+                <Popup onClose={() => setShowLoginForm(false)}>
+                    <LoginForm onSuccess={() => {
+                        setShowLoginForm(false);
+                        setMenuVisible(false);
+                    }} />
+                </Popup>
+            )}
+            {showRegisterForm && (
+                <Popup onClose={() => setShowRegisterForm(false)}>
+                    <RegisterForm onSuccess={() => {
+                        setShowRegisterForm(false);
+                        setMenuVisible(false);
+                    }} />
+                </Popup>
+            )}
+            {isImportPopupActive && (
+                <Popup onClose={() => setImportPopupActive(false)}>
+                    <ImportForm onSuccess={() => setImportPopupActive(false)} />
+                </Popup>
+            )}
         </div>
     );
 };

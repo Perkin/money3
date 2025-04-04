@@ -1,38 +1,94 @@
 .dataItem {
-    display: table-row;
-    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr 1fr;
+    gap: 10px;
+    padding: 5px;
+    align-items: center;
     background-color: #333;
-    font-weight: bold;
     border-top: 1px solid black;
+    font-weight: bold;
 }
 
-.dataItem.even {
+.even {
     background-color: #444;
 }
 
-.dataItem.closed {
+.closed {
     color: #AF4C50;
 }
 
-.dataItem > div {
-    display: table-cell;
-    padding: 5px;
-    width: var(--item-width);
+.itemMoney {
+    text-align: right;
 }
 
-.dataItem .itemMoney {
-    width: calc(var(--item-width) + 50px);
+.itemActions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
 }
 
-.dataItem .itemActions {
-    width: calc(var(--item-width) - 50px);
-    text-align: center;
+.investCloseButton,
+.investEditButton {
+    border: none;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 4px;
+    font-size: 16px;
+    min-width: 24px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .investCloseButton {
-    padding: 3px;
     background-color: #AF4C50;
-    color: #fff;
-    border: none;
-    cursor: pointer;
+    color: white;
+}
+
+.investEditButton {
+    background-color: #2196f3;
+    color: white;
+}
+
+.investCloseButton:hover {
+    background-color: #d32f2f;
+}
+
+.investEditButton:hover {
+    background-color: #1976d2;
+}
+
+.investRollbackButton {
+    composes: investEditButton;
+    background-color: #8e44ad;
+    color: white;
+}
+
+.investRollbackButton:hover {
+    background-color: #9b59b6;
+}
+
+@media (max-width: 768px) {
+    .dataItem {
+        grid-template-columns: 1fr 1fr 1.5fr 0.5fr;
+        font-size: 14px;
+        gap: 5px;
+    }
+
+    .investCloseButton,
+    .investEditButton {
+        font-size: 14px;
+        min-width: 20px;
+        min-height: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dataItem {
+        grid-template-columns: 1fr 1fr 1fr 0.5fr;
+        font-size: 12px;
+        gap: 3px;
+        padding: 3px;
+    }
 }

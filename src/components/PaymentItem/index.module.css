@@ -1,40 +1,87 @@
 .dataItem {
-    display: table-row;
-    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr 1fr;
+    gap: 10px;
+    padding: 5px 5px 5px 30px;
+    align-items: center;
     background-color: #333;
 }
 
-.dataItem.even {
+.even {
     background-color: #444;
 }
 
-.dataItem.payed {
-    color: #AF4C50;
-}
-
-.dataItem.debt > .itemMoney {
+.debt {
     color: red;
 }
 
-.dataItem > div {
-    display: table-cell;
-    padding: 5px;
-    width: var(--item-width);
+.payed {
+    color: #AF4C50;
 }
 
-.dataItem .itemMoney {
-    width: calc(var(--item-width) + 50px);
+.itemMoney {
+    text-align: right;
 }
 
-.dataItem .itemActions {
-    width: calc(var(--item-width) - 50px);
-    text-align: center;
+.itemActions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+}
+
+.paymentCloseButton,
+.paymentEditButton {
+    border: none;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 4px;
+    font-size: 16px;
+    min-width: 24px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .paymentCloseButton {
-    padding: 3px;
     background-color: #4CAF50;
-    color: #fff;
-    border: none;
-    cursor: pointer;
+    color: white;
+}
+
+.paymentEditButton {
+    background-color: #2196f3;
+    color: white;
+}
+
+.paymentCloseButton:hover {
+    background-color: #388e3c;
+}
+
+.paymentEditButton:hover {
+    background-color: #1976d2;
+}
+
+@media (max-width: 768px) {
+    .dataItem {
+        grid-template-columns: 1fr 1fr 1.5fr 0.5fr;
+        font-size: 14px;
+        gap: 5px;
+        padding: 5px 5px 5px 20px;
+    }
+
+    .paymentCloseButton,
+    .paymentEditButton {
+        font-size: 14px;
+        min-width: 20px;
+        min-height: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dataItem {
+        grid-template-columns: 1fr 1fr 1fr 0.5fr;
+        font-size: 12px;
+        gap: 3px;
+        padding: 3px 3px 3px 15px;
+    }
 }

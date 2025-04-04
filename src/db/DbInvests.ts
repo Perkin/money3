@@ -71,8 +71,11 @@ async function updateInvest(
         closedDate?: Date | null;
     }
 ): Promise<number> {
+    // Сначала получаем все необходимые данные
+    const payments = updates.money !== undefined ? await getPayments({ id, isPayed: 0 }) : [];
+    
     const db = await getDB();
-    const transaction = db.transaction(['invests'], 'readwrite');
+    const transaction = db.transaction(['invests', 'payments'], 'readwrite');
     const investStore = transaction.objectStore('invests');
 
     const invest = await investStore.get(id);
@@ -86,61 +89,71 @@ async function updateInvest(
         updatedAt: new Date()
     };
 
-    const result = await investStore.put(updatedInvest);
+    await investStore.put(updatedInvest);
     
-    // Если изменилась сумма, нужно обновить все неоплаченные платежи
+    // Если изменилась сумма, обновляем платежи
     if (updates.money !== undefined) {
-        const payments = await getPayments({ id, isPayed: 0 });
         const paymentStore = transaction.objectStore('payments');
         
         for (const payment of payments) {
             const updatedPayment = {
                 ...payment,
-                money: updates.money * defaultIncomeRatio,
+                money: updates.money * (invest.incomeRatio || defaultIncomeRatio),
                 updatedAt: new Date()
             };
             await paymentStore.put(updatedPayment);
         }
     }
 
+    // Дожидаемся завершения транзакции
+    await transaction.done;
+
     window.dispatchEvent(new CustomEvent('fetchInvests'));
-    return result as number;
+    return id;
 }
 
 async function rollbackLastPayment(investId: number): Promise<void> {
+    // Получаем все платежи до начала транзакции
+    const payments = await getPayments({ id: investId });
+    // Сортируем по дате платежа, от старых к новым
+    payments.sort((a, b) => a.paymentDate.getTime() - b.paymentDate.getTime());
+
+    // Находим последний неоплаченный платёж
+    const lastUnpaidIndex = payments.findLastIndex(p => !p.isPayed);
+    if (lastUnpaidIndex === -1) {
+        throw new Error('Все платежи уже оплачены, нечего откатывать');
+    }
+
+    // Находим последний оплаченный платёж
+    const lastPaidIndex = payments.findLastIndex(p => p.isPayed);
+    if (lastPaidIndex === -1) {
+        throw new Error('Нет оплаченных платежей. Для отката нужен хотя бы один оплаченный платёж');
+    }
+
     const db = await getDB();
     const transaction = db.transaction(['payments'], 'readwrite');
     const paymentStore = transaction.objectStore('payments');
 
-    // Получаем все платежи для инвестиции, отсортированные по дате
-    const payments = await getPayments({ id: investId });
-    payments.sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
+    try {
+        // Удаляем последний неоплаченный платёж
+        await paymentStore.delete(payments[lastUnpaidIndex].id!);
 
-    // Находим последний неоплаченный платёж
-    const lastUnpaidIndex = payments.findIndex(p => !p.isPayed);
-    if (lastUnpaidIndex === -1) {
-        throw new Error('Нет неоплаченных платежей для отката');
+        // Переводим последний оплаченный платёж в неоплаченные
+        const lastPaidPayment = payments[lastPaidIndex];
+        const updatedPayment = {
+            ...lastPaidPayment,
+            isPayed: 0,
+            updatedAt: new Date()
+        };
+        await paymentStore.put(updatedPayment);
+        await transaction.done;
+
+        window.dispatchEvent(new CustomEvent('fetchInvests'));
+    } catch (error) {
+        // Если произошла ошибка, отменяем транзакцию
+        transaction.abort();
+        throw error;
     }
-
-    // Находим последний оплаченный платёж
-    const lastPaidIndex = payments.findIndex(p => p.isPayed);
-    if (lastPaidIndex === -1 || lastPaidIndex > lastUnpaidIndex) {
-        throw new Error('Нет оплаченных платежей для отката');
-    }
-
-    // Удаляем последний неоплаченный платёж
-    await paymentStore.delete(payments[lastUnpaidIndex].id!);
-
-    // Переводим последний оплаченный платёж в неоплаченные
-    const lastPaidPayment = payments[lastPaidIndex];
-    const updatedPayment = {
-        ...lastPaidPayment,
-        isPayed: 0,
-        updatedAt: new Date()
-    };
-    const result = await paymentStore.put(updatedPayment);
-
-    window.dispatchEvent(new CustomEvent('fetchInvests'));
 }
 
 export type { InvestFilter, Invest };
