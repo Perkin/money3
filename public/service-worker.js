@@ -1,5 +1,5 @@
 // Имя кэша, чтобы различать версии
-const CACHE_NAME = 'money3-cache-v11';
+const CACHE_NAME = 'money3-cache-v12';
 
 // Файлы, которые будут кэшироваться
 const CACHE_ASSETS = [
@@ -11,6 +11,7 @@ const CACHE_ASSETS = [
     '/money3/apple-touch-icon.png',
     '/money3/favicon-16x16.png',
     '/money3/favicon-32x32.png',
+    '/money3/manifest.json'
 ];
 
 // Устанавливаем кэш
@@ -42,6 +43,11 @@ self.addEventListener('activate', event => {
 
 // Интерсептируем запросы и обслуживаем из кэша
 self.addEventListener('fetch', event => {
+    // Не кэшируем запросы к API
+    if (event.request.url.includes('/api/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then(response => {
