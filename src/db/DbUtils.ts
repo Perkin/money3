@@ -2,6 +2,7 @@ import { getDB } from './Db';
 import { getInvests, InvestFilter } from './DbInvests';
 import { getPayments, addPayment, PaymentFilter } from './DbPayments';
 import { toast } from 'react-toastify';
+import { get, post } from '@/utils/networkUtils';
 import { API_URL } from '@/config.ts';
 
 interface ImportInvest {
@@ -107,26 +108,37 @@ async function exportData(): Promise<void> {
     }
 }
 
+interface UpdateResponse {
+    status: 'success' | 'no_updates' | 'error';
+    message?: string;
+    data?: ImportData;
+}
+
 async function syncUpdates(): Promise<void> {
     if (!localStorage.getItem('token')) {
         return;
     }
 
     const lastSyncDate = localStorage.getItem('lastSyncDate') || '';
-
     const toastSyncUpdates = toast.info('Получаю обновления...', {autoClose: false});
-    const result = await sendRequest(`/updates?since=${lastSyncDate}`);
-    toast.done(toastSyncUpdates)
 
-    if (result && result.status == 'success') {
-        await importData(result);
-        toast.info('Обновления применены');
-        window.dispatchEvent(new CustomEvent('fetchInvests'));
-    } else if (result && result.status == 'no_updates') {
-        toast.info('Обновлений нет');
+    try {
+        const result = await get<UpdateResponse>(`/updates?since=${lastSyncDate}`);
+        toast.done(toastSyncUpdates);
+
+        if (result.status === 'success' && result.data) {
+            await importData(result.data);
+            toast.success('Обновления успешно применены');
+            window.dispatchEvent(new CustomEvent('fetchInvests'));
+        } else if (result.status === 'no_updates') {
+            toast.info('Обновлений нет');
+        }
+
+        localStorage.setItem('lastSyncDate', new Date().toISOString());
+    } catch (error) {
+        toast.done(toastSyncUpdates);
+        // Ошибка уже обработана в networkUtils
     }
-
-    localStorage.setItem('lastSyncDate', new Date().toISOString());
 }
 
 async function updateRemoteData(): Promise<void> {
@@ -136,28 +148,34 @@ async function updateRemoteData(): Promise<void> {
 
     const lastSyncDate = localStorage.getItem('lastSyncDate');
 
-    let investFilter : InvestFilter = {};
-    let paymentFilter : PaymentFilter = {};
+    let investFilter: InvestFilter = {};
+    let paymentFilter: PaymentFilter = {};
 
     if (lastSyncDate) {
-        investFilter = {updatedAt: new Date(lastSyncDate)};
-        paymentFilter = {updatedAt: new Date(lastSyncDate)};
+        investFilter = { updatedAt: new Date(lastSyncDate) };
+        paymentFilter = { updatedAt: new Date(lastSyncDate) };
     }
 
     const invests = await getInvests(investFilter);
     const payments = await getPayments(paymentFilter);
 
-    if (!invests.length && !payments.length ) {
+    if (!invests.length && !payments.length) {
         return;
     }
-    const exportJson = {invests: invests, payments: payments};
 
-    const toastUpdateRemoteData = toast('Отправляю данные...', {autoClose: false});
-    const result = await sendRequest('/update', 'POST', exportJson);
-    toast.done(toastUpdateRemoteData);
+    const exportJson = { invests, payments };
+    const toastUpdateRemoteData = toast.info('Отправляю данные...', { autoClose: false });
 
-    if (result && result.status == 'success') {
-        toast('Новые данные успешно отправлены на сервер');
+    try {
+        const result = await post<UpdateResponse>('/update', exportJson);
+        toast.done(toastUpdateRemoteData);
+
+        if (result.status === 'success') {
+            toast.success('Новые данные успешно отправлены на сервер');
+        }
+    } catch (error) {
+        toast.done(toastUpdateRemoteData);
+        // Ошибка уже обработана в networkUtils
     }
 }
 
@@ -196,4 +214,10 @@ async function sendRequest(url: string, method: string = 'GET', json: any = null
     return null;
 }
 
-export { calculatePayments, exportData, importData, syncUpdates, updateRemoteData };
+export {
+    calculatePayments,
+    importData,
+    exportData,
+    syncUpdates,
+    updateRemoteData,
+};

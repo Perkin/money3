@@ -12,6 +12,7 @@ interface Payment {
 type PaymentFilter = {
     id?: number;
     updatedAt?: Date;
+    isPayed?: 1 | 0;
 };
 
 async function getPayments(filter: PaymentFilter = {}): Promise<Payment[]> {
@@ -23,6 +24,8 @@ async function getPayments(filter: PaymentFilter = {}): Promise<Payment[]> {
         return store.index('investIdIdx').getAll(filter.id);
     } else if (filter.updatedAt !== undefined) {
         return store.index('updatedAtIdx').getAll(IDBKeyRange.lowerBound(filter.updatedAt));
+    } else if (filter.isPayed !== undefined) {
+        return store.index('isPayedIdx').getAll(filter.isPayed);
     } else {
         return store.getAll();
     }
@@ -46,7 +49,7 @@ async function addPayment(
         updatedAt: new Date(),
     };
 
-    return store.add(payment);
+    return store.add(payment) as Promise<number>;
 }
 
 async function closePayment(paymentId: number): Promise<number> {
@@ -60,8 +63,36 @@ async function closePayment(paymentId: number): Promise<number> {
     payment.isPayed = 1;
     payment.updatedAt = new Date();
 
-    return store.put(payment);
+    return store.put(payment) as Promise<number>;
+}
+
+async function updatePayment(
+    id: number,
+    updates: {
+        money?: number;
+        paymentDate?: Date;
+        isPayed?: number;
+    }
+): Promise<number> {
+    const db = await getDB();
+    const transaction = db.transaction(['payments'], 'readwrite');
+    const paymentStore = transaction.objectStore('payments');
+
+    const payment = await paymentStore.get(id);
+    if (!payment) {
+        throw new Error('Платеж не найден');
+    }
+
+    const updatedPayment = {
+        ...payment,
+        ...updates,
+        updatedAt: new Date()
+    };
+
+    const result = await paymentStore.put(updatedPayment);
+    window.dispatchEvent(new CustomEvent('fetchInvests'));
+    return result as number;
 }
 
 export type { PaymentFilter, Payment };
-export { getPayments, addPayment, closePayment };
+export { getPayments, addPayment, closePayment, updatePayment };
