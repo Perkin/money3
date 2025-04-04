@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import styles from './index.module.css';
 import { toast } from 'react-toastify';
 import { addInvest } from '@/db/DbInvests.ts';
-import { calculatePayments } from '@/db/DbUtils.ts';
+import { calculatePayments, updateRemoteData } from '@/db/DbUtils.ts';
 
 const InvestForm = () => {
     const formRef = useRef<HTMLFormElement | null>(null);
@@ -26,7 +26,7 @@ const InvestForm = () => {
             if (Number.isInteger(investId)) {
                 // Рассчитываем новые платежи
                 await calculatePayments();
-                // await updateRemoteData();
+                await updateRemoteData();
                 formRef.current?.reset();
                 toast.success('Инвестиция добавлена');
 

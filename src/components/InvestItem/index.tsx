@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from './index.module.css';
-import { closeInvest } from '@/db/DbInvests.ts';
+import { closeInvest, Invest } from '@/db/DbInvests.ts';
 import { closePayment, getPayments, Payment, PaymentFilter } from '@/db/DbPayments.ts';
 import { toast } from 'react-toastify';
 import PaymentItem from '@/components/PaymentItem';
-import { defaultIncomeRatio } from '@/db/DbUtils';
+import { defaultIncomeRatio, updateRemoteData } from '@/db/DbUtils';
 import { formatDate, formatMoney } from '@/utils/formatUtils.ts';
 
-const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, addIncomeMoney, addDebtMoney}) => {
+interface InvestItemProps {
+    invest: Invest;
+    onCloseInvest: () => void;
+    showPayed: boolean;
+    isEven: boolean;
+    addInvestMoney: (id: number, amount: number) => void;
+    addIncomeMoney: (id: number, amount: number) => void;
+    addDebtMoney: (id: number, amount: number) => void;
+}
+
+const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, addIncomeMoney, addDebtMoney}: InvestItemProps) => {
     const today = new Date();
 
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -33,13 +43,13 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
     }, [fetchPayments]);
 
     useEffect(() => {
-        if (invest.isActive) {
+        if (invest.isActive && invest.id !== undefined) {
             addInvestMoney(invest.id, invest.money);
             addIncomeMoney(invest.id, invest.money * (invest.incomeRatio || defaultIncomeRatio));
         }
     }, [invest, addInvestMoney, addIncomeMoney]);
 
-    const handleCloseInvest = async (investId) => {
+    const handleCloseInvest = async (investId: number) => {
         if (!confirm('Точно закрыть?')) {
             return;
         }
@@ -47,34 +57,32 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
         try {
             const closedInvestId = await closeInvest(investId);
             if (Number.isInteger(closedInvestId) && closedInvestId === investId) {
+                // Закрываем все открытые платежи
+                const payments = await getPayments({id: investId});
+                for (const payment of payments) {
+                    if (!payment.isPayed && payment.id !== undefined) {
+                        try {
+                            const closedPaymentId = await closePayment(payment.id);
+                            if (Number.isInteger(closedPaymentId) && closedPaymentId === payment.id) {
+                                toast.info('Долг автоматически оплачен');
+                            } else {
+                                toast.error('Не удалось закрыть активный долг');
+                            }
+                        } catch (error: unknown) {
+                            toast.error(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+                        }
+                    }
+                }
+
                 toast.success('Инвестиция закрыта');
-
-                // await updateRemoteData();
-
                 onCloseInvest();
                 window.dispatchEvent(new CustomEvent('fetchInvests'));
+                await updateRemoteData();
             } else {
                 toast.error('Не удалось закрыть инвестицию');
             }
-        } catch (error) {
+        } catch (error: unknown) {
             toast.error(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-        }
-
-        // Закрываем все открытые платежи
-        const payments = await getPayments({id: investId});
-        for (const payment of payments) {
-            if (!payment.isPayed) {
-                try {
-                    const closedPaymentId = await closePayment(payment.id!);
-                    if (Number.isInteger(closedPaymentId) && closedPaymentId === payment.id) {
-                        toast.info('Долг автоматически оплачен');
-                    } else {
-                        toast.error('Не удалось закрыть активный долг');
-                    }
-                } catch (error) {
-                    toast.error(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-                }
-            }
         }
     }
 

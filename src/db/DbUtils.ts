@@ -1,8 +1,32 @@
 import { getDB } from './Db';
-import { getInvests } from './DbInvests';
-import { getPayments, addPayment } from './DbPayments';
+import { getInvests, InvestFilter } from './DbInvests';
+import { getPayments, addPayment, PaymentFilter } from './DbPayments';
 import { toast } from 'react-toastify';
 import { API_URL } from '@/config.ts';
+
+interface ImportInvest {
+    id?: number;
+    money: number;
+    incomeRatio: number;
+    isActive: number;
+    createdDate: string;
+    updatedAt: string;
+    closedDate?: string;
+}
+
+interface ImportPayment {
+    id?: number;
+    investId: number;
+    money: number;
+    isPayed: number;
+    paymentDate: string;
+    updatedAt: string;
+}
+
+interface ImportData {
+    invests: ImportInvest[];
+    payments: ImportPayment[];
+}
 
 export const defaultIncomeRatio = 0.05;
 
@@ -37,7 +61,7 @@ async function calculatePayments(): Promise<void> {
 }
 
 async function importData(
-    importData: { invests: object[]; payments: object[] },
+    importData: ImportData,
     cleanImport: boolean = false
 ): Promise<void> {
     const db = await getDB();
@@ -51,18 +75,22 @@ async function importData(
     }
 
     for (const invest of importData.invests) {
-        invest.createdDate = new Date(invest.createdDate);
-        invest.updatedAt = new Date(invest.updatedAt);
-        if (!invest.isActive && invest.closedDate) {
-            invest.closedDate = new Date(invest.closedDate);
-        }
-        await investStore.put(invest);
+        const newInvest = {
+            ...invest,
+            createdDate: new Date(invest.createdDate),
+            updatedAt: new Date(invest.updatedAt),
+            closedDate: invest.closedDate ? new Date(invest.closedDate) : undefined
+        };
+        await investStore.put(newInvest);
     }
 
     for (const payment of importData.payments) {
-        payment.paymentDate = new Date(payment.paymentDate);
-        payment.updatedAt = new Date(payment.updatedAt);
-        await paymentStore.put(payment);
+        const newPayment = {
+            ...payment,
+            paymentDate: new Date(payment.paymentDate),
+            updatedAt: new Date(payment.updatedAt)
+        };
+        await paymentStore.put(newPayment);
     }
 }
 
@@ -80,6 +108,10 @@ async function exportData(): Promise<void> {
 }
 
 async function syncUpdates(): Promise<void> {
+    if (!localStorage.getItem('token')) {
+        return;
+    }
+
     const lastSyncDate = localStorage.getItem('lastSyncDate') || '';
 
     const toastSyncUpdates = toast.info('Получаю обновления...', {autoClose: false});
@@ -89,19 +121,19 @@ async function syncUpdates(): Promise<void> {
     if (result && result.status == 'success') {
         await importData(result);
         toast.info('Обновления применены');
-
         window.dispatchEvent(new CustomEvent('fetchInvests'));
-    } else {
-        if (result && result.status == 'no_updates') {
-            toast.info('Обновлений нет');
-        }
-        //await updateRemoteData();
+    } else if (result && result.status == 'no_updates') {
+        toast.info('Обновлений нет');
     }
 
     localStorage.setItem('lastSyncDate', new Date().toISOString());
 }
 
 async function updateRemoteData(): Promise<void> {
+    if (!localStorage.getItem('token')) {
+        return;
+    }
+
     const lastSyncDate = localStorage.getItem('lastSyncDate');
 
     let investFilter : InvestFilter = {};
@@ -112,17 +144,17 @@ async function updateRemoteData(): Promise<void> {
         paymentFilter = {updatedAt: new Date(lastSyncDate)};
     }
 
-    const invests = await dbGetInvests(investFilter);
-    const payments = await dbGetPayments(paymentFilter);
+    const invests = await getInvests(investFilter);
+    const payments = await getPayments(paymentFilter);
 
     if (!invests.length && !payments.length ) {
         return;
     }
     const exportJson = {invests: invests, payments: payments};
 
-    const toastUpdateRemoteData = toast('Отправляю данные...', -1);
+    const toastUpdateRemoteData = toast('Отправляю данные...', {autoClose: false});
     const result = await sendRequest('/update', 'POST', exportJson);
-    toastUpdateRemoteData.hideToast();
+    toast.done(toastUpdateRemoteData);
 
     if (result && result.status == 'success') {
         toast('Новые данные успешно отправлены на сервер');
@@ -164,4 +196,4 @@ async function sendRequest(url: string, method: string = 'GET', json: any = null
     return null;
 }
 
-export { calculatePayments, exportData, importData, syncUpdates };
+export { calculatePayments, exportData, importData, syncUpdates, updateRemoteData };

@@ -46,7 +46,7 @@ async function addInvest(money: number, incomeRatio: number, createdDate: Date):
     return store.add(invest);
 }
 
-async function closeInvest(investId: number): Promise<void> {
+async function closeInvest(investId: number): Promise<number> {
     const db = await getDB();
     const transaction = db.transaction('invests', 'readwrite');
     const store = transaction.objectStore('invests');
@@ -61,4 +61,5 @@ async function closeInvest(investId: number): Promise<void> {
     return store.put(invest);
 }
 
-export { InvestFilter, Invest, getInvests, addInvest, closeInvest };
+export type { InvestFilter, Invest };
+export { getInvests, addInvest, closeInvest };

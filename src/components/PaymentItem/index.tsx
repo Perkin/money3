@@ -1,12 +1,19 @@
 import styles from './index.module.css';
-import { closePayment } from '@/db/DbPayments.ts';
+import { closePayment, Payment } from '@/db/DbPayments.ts';
 import { toast } from 'react-toastify';
-import { calculatePayments } from '@/db/DbUtils.ts';
+import { calculatePayments, updateRemoteData } from '@/db/DbUtils.ts';
 import { formatDate, formatMoney } from '@/utils/formatUtils.ts';
 
-const PaymentItem = ({ payment, isEven, isDebt, onClosePayment}) => {
+interface PaymentItemProps {
+    payment: Payment;
+    isEven: boolean;
+    isDebt: boolean;
+    onClosePayment: () => void;
+}
 
-    const handleClosePayment = async (paymentId) => {
+const PaymentItem = ({ payment, isEven, isDebt, onClosePayment }: PaymentItemProps) => {
+
+    const handleClosePayment = async (paymentId: number) => {
         try {
             const closedPaymentId = await closePayment(paymentId);
             if (Number.isInteger(closedPaymentId) && closedPaymentId === paymentId) {
@@ -16,7 +23,7 @@ const PaymentItem = ({ payment, isEven, isDebt, onClosePayment}) => {
                 await calculatePayments();
                 onClosePayment();
 
-                //await updateRemoteData();
+                await updateRemoteData();
             } else {
                 toast.error('Не удалось оплатить платеж');
             }

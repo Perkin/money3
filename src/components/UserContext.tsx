@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { syncUpdates } from '@/db/DbUtils';
 
 interface User {
     username: string;
@@ -30,7 +31,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
     };
 
-    // При загрузке страницы читаем токен из cookies и восстанавливаем пользователя
+    // При загрузке страницы восстанавливаем пользователя из токена
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -42,7 +43,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 logout();
             }
         }
-    }, []);
+    }, []); // Запускается только при монтировании компонента
+
+    // Синхронизируем данные при появлении пользователя
+    useEffect(() => {
+        if (user) {
+            syncUpdates().catch((error) => {
+                console.error("Ошибка при синхронизации:", error);
+            });
+        }
+    }, [user]); // Запускается только при изменении user
 
     return (
         <UserContext.Provider value={{ user, login, logout }}>

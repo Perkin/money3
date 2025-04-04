@@ -1,5 +1,4 @@
 import { getDB } from './Db';
-import { Invest } from '@/db/DbInvests.ts';
 
 interface Payment {
     id?: number;
@@ -64,4 +63,5 @@ async function closePayment(paymentId: number): Promise<number> {
     return store.put(payment);
 }
 
-export { PaymentFilter, Payment, getPayments, addPayment, closePayment };
+export type { PaymentFilter, Payment };
+export { getPayments, addPayment, closePayment };
