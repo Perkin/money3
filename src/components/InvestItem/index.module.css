@@ -59,16 +59,6 @@
     background-color: #1976d2;
 }
 
-.investRollbackButton {
-    composes: investEditButton;
-    background-color: #8e44ad;
-    color: white;
-}
-
-.investRollbackButton:hover {
-    background-color: #9b59b6;
-}
-
 @media (max-width: 768px) {
     .dataItem {
         grid-template-columns: 1fr 1fr 1.5fr 0.5fr;

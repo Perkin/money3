@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from './index.module.css';
-import { closeInvest, Invest, rollbackLastPayment } from '@/db/DbInvests.ts';
+import { closeInvest, Invest } from '@/db/DbInvests.ts';
 import { closePayment, getPayments, Payment, PaymentFilter } from '@/db/DbPayments.ts';
 import { toast } from 'react-toastify';
 import PaymentItem from '@/components/PaymentItem';
@@ -88,21 +88,6 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
         }
     }
 
-    const handleRollbackPayment = async () => {
-        if (!invest.id || !confirm('Откатить последний неоплаченный платёж?')) {
-            return;
-        }
-
-        try {
-            await rollbackLastPayment(invest.id);
-            toast.success('Платёж успешно откачен');
-            await fetchPayments();
-            await updateRemoteData();
-        } catch (error) {
-            toast.error(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-        }
-    };
-
     return (
         <>
             <div className={`${styles.dataItem} ${isEven ? styles.even : ''} ${invest.closedDate ? styles.closed : ''}`}>
@@ -112,13 +97,6 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                 <div className={styles.itemActions}>
                     {invest.isActive == 1 && (
                         <>
-                            <button
-                                className={styles.investRollbackButton}
-                                title="Откатить последний платёж"
-                                onClick={handleRollbackPayment}
-                            >
-                                ↺
-                            </button>
                             <button
                                 className={styles.investEditButton}
                                 title="Редактировать инвестицию"
