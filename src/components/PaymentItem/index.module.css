@@ -7,6 +7,10 @@
     background-color: #333;
 }
 
+.emptyCell {
+    visibility: hidden;
+}
+
 .even {
     background-color: #444;
 }

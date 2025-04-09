@@ -39,27 +39,25 @@ const PaymentItem = ({ payment, isEven, isDebt, onClosePayment }: PaymentItemPro
     return (
         <>
             <div className={`${styles.dataItem} ${isEven ? styles.even : ''} ${isDebt ? styles.debt : ''} ${payment.isPayed == 1 ? styles.payed : ''}`}>
-                <div></div>
+                <div className={styles.emptyCell}></div>
                 <div>{formatDate(payment.paymentDate)}</div>
                 <div className={styles.itemMoney}>{formatMoney(payment.money)}</div>
                 <div className={styles.itemActions}>
+                    <button
+                        className={styles.paymentEditButton}
+                        title="Редактировать платёж"
+                        onClick={() => setShowEditForm(true)}
+                    >
+                        ✎
+                    </button>
                     {payment.isPayed == 0 && (
-                        <>
-                            <button
-                                className={styles.paymentEditButton}
-                                title="Редактировать платёж"
-                                onClick={() => setShowEditForm(true)}
-                            >
-                                ✎
-                            </button>
-                            <button
-                                className={styles.paymentCloseButton}
-                                title="Оплата произведена"
-                                onClick={() => handleClosePayment(payment.id!)}
-                            >
-                                ✓
-                            </button>
-                        </>
+                        <button
+                            className={styles.paymentCloseButton}
+                            title="Оплата произведена"
+                            onClick={() => handleClosePayment(payment.id!)}
+                        >
+                            ✓
+                        </button>
                     )}
                 </div>
             </div>
