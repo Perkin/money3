@@ -39,7 +39,10 @@ async function calculatePayments(): Promise<void> {
         let lastPaymentDate = invest.createdDate;
 
         const payments = await getPayments({ id: invest.id });
-        const lastPayment = payments.pop();
+        const sortedPayments = [...payments].sort((a, b) => 
+            a.paymentDate.getTime() - b.paymentDate.getTime()
+        );
+        const lastPayment = sortedPayments.length > 0 ? sortedPayments[sortedPayments.length - 1] : null;
 
         if (lastPayment && !lastPayment.isPayed) {
             continue;
@@ -49,14 +52,37 @@ async function calculatePayments(): Promise<void> {
             lastPaymentDate = lastPayment.paymentDate;
         }
 
-        lastPaymentDate.setMonth(lastPaymentDate.getMonth() + 1);
-        lastPaymentDate.setHours(0, 0, 0);
+        // Берем изначальную дату инвестиции, чтобы сохранить оригинальный день
+        const originalDay = invest.createdDate.getDate();
+        
+        // Получаем месяц и год из последнего платежа
+        const lastMonth = lastPaymentDate.getMonth();
+        const lastYear = lastPaymentDate.getFullYear();
+        
+        // Рассчитываем новый месяц и год
+        let newMonth = lastMonth + 1;
+        let newYear = lastYear;
+        
+        if (newMonth > 11) {
+            newMonth = 0;
+            newYear += 1;
+        }
+        
+        // Получаем последний день нового месяца
+        const lastDayOfMonth = new Date(newYear, newMonth + 1, 0).getDate();
+        
+        // Если оригинальный день больше, чем количество дней в новом месяце,
+        // используем последний день месяца, иначе используем оригинальный день
+        const dayToUse = originalDay > lastDayOfMonth ? lastDayOfMonth : originalDay;
+        
+        // Создаем новую дату в текущем часовом поясе
+        const newDate = new Date(newYear, newMonth, dayToUse, 0, 0, 0, 0);
 
         await addPayment(
             invest.id!,
             invest.money,
             invest.incomeRatio || defaultIncomeRatio,
-            lastPaymentDate
+            newDate
         );
     }
 }
