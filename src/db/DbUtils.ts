@@ -137,7 +137,8 @@ async function exportData(): Promise<void> {
 interface UpdateResponse {
     status: 'success' | 'no_updates' | 'error';
     message?: string;
-    data?: ImportData;
+    invests?: ImportInvest[];
+    payments?: ImportPayment[];
 }
 
 async function syncUpdates(): Promise<void> {
@@ -150,8 +151,13 @@ async function syncUpdates(): Promise<void> {
 
     const result = await get<UpdateResponse>(`/updates?since=${lastSyncDate}`);
 
-    if (result.status === 'success' && result.data) {
-        await importData(result.data);
+    if (result.status === 'success') {
+        const dataToImport: ImportData = {
+            invests: result.invests || [],
+            payments: result.payments || []
+        };
+        
+        await importData(dataToImport);
         toast.success('Обновления успешно применены');
         window.dispatchEvent(new CustomEvent('fetchInvests'));
     } else if (result.status === 'no_updates') {
