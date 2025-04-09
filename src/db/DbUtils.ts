@@ -146,7 +146,7 @@ async function syncUpdates(): Promise<void> {
     }
 
     const lastSyncDate = localStorage.getItem('lastSyncDate') || '';
-    const toastSyncUpdates = toast.info('Получаю обновления...', {autoClose: false});
+    const toastSyncUpdates = toast.info(`Получаю обновления ${lastSyncDate}...`, {autoClose: false});
 
     try {
         const result = await get<UpdateResponse>(`/updates?since=${lastSyncDate}`);
