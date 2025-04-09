@@ -12,6 +12,12 @@ vi.mock('../DbPayments', () => ({
     getPayments: vi.fn(),
 }));
 
+// Мокируем IDBKeyRange для тестов
+// @ts-ignore
+global.IDBKeyRange = {
+    lowerBound: vi.fn().mockReturnValue('lower-bound-range')
+};
+
 // Глобальный мок для window.dispatchEvent
 Object.defineProperty(window, 'dispatchEvent', {
     value: vi.fn(),
@@ -72,6 +78,19 @@ describe('DbInvests', () => {
             
             expect(mockStore.index).toHaveBeenCalledWith('isActiveIdx');
             expect(mockIndexGet.getAll).toHaveBeenCalledWith(1);
+            expect(result).toEqual(mockInvests);
+        });
+
+        it('should filter by updatedAt date', async () => {
+            const mockInvests = [{ id: 1, updatedAt: new Date('2023-06-01') }];
+            const filterDate = new Date('2023-05-01');
+            mockIndexGet.getAll.mockResolvedValue(mockInvests);
+            
+            const result = await getInvests({ updatedAt: filterDate });
+            
+            expect(mockStore.index).toHaveBeenCalledWith('updatedAtIdx');
+            // Не проверяем конкретный аргумент IDBKeyRange, просто проверяем, что getAll был вызван
+            expect(mockIndexGet.getAll).toHaveBeenCalled();
             expect(result).toEqual(mockInvests);
         });
     });
@@ -148,6 +167,46 @@ describe('DbInvests', () => {
             expect(result).toBe(investId);
         });
 
+        it('should update createdDate when provided', async () => {
+            const investId = 1;
+            const newDate = new Date('2023-07-01');
+            const updates = { createdDate: newDate };
+            const mockInvest = {
+                id: investId,
+                money: 1000,
+                incomeRatio: 0.05,
+                createdDate: new Date('2023-01-01'),
+            };
+            
+            mockStore.get.mockResolvedValue(mockInvest);
+            
+            await updateInvest(investId, updates);
+            
+            expect(mockStore.put).toHaveBeenCalledWith(expect.objectContaining({
+                createdDate: newDate,
+            }));
+        });
+
+        it('should update closedDate when provided', async () => {
+            const investId = 1;
+            const newDate = new Date('2023-12-31');
+            const updates = { closedDate: newDate };
+            const mockInvest = {
+                id: investId,
+                money: 1000,
+                incomeRatio: 0.05,
+                closedDate: null,
+            };
+            
+            mockStore.get.mockResolvedValue(mockInvest);
+            
+            await updateInvest(investId, updates);
+            
+            expect(mockStore.put).toHaveBeenCalledWith(expect.objectContaining({
+                closedDate: newDate,
+            }));
+        });
+
         it('should update unpaid payments when money changes', async () => {
             const investId = 1;
             const updates = { money: 2000 };
@@ -180,6 +239,48 @@ describe('DbInvests', () => {
                 money: 100, // 2000 * 0.05
                 updatedAt: expect.any(Date),
             }));
+        });
+
+        it('should use defaultIncomeRatio when invest has no incomeRatio', async () => {
+            const investId = 1;
+            const updates = { money: 2000 };
+            const mockInvest = {
+                id: investId,
+                money: 1000,
+                // отсутствует incomeRatio
+            };
+            const mockPayments = [
+                { id: 101, investId: 1, money: 50, isPayed: 0 }
+            ];
+            
+            mockStore.get.mockResolvedValue(mockInvest);
+            (getPayments as any).mockResolvedValue(mockPayments);
+            
+            await updateInvest(investId, updates);
+            
+            // Проверяем использование defaultIncomeRatio (0.05)
+            expect(mockStore.put).toHaveBeenCalledWith(expect.objectContaining({
+                id: 101,
+                money: 100, // 2000 * 0.05 (defaultIncomeRatio)
+                updatedAt: expect.any(Date),
+            }));
+        });
+
+        it('should not update payments when money is not changed', async () => {
+            const investId = 1;
+            const updates = { createdDate: new Date() }; // Только дата, не деньги
+            const mockInvest = {
+                id: investId,
+                money: 1000,
+                incomeRatio: 0.05,
+            };
+            
+            mockStore.get.mockResolvedValue(mockInvest);
+            
+            await updateInvest(investId, updates);
+            
+            // Проверяем, что не было запроса на получение платежей
+            expect(getPayments).not.toHaveBeenCalled();
         });
 
         it('should throw error if invest not found', async () => {

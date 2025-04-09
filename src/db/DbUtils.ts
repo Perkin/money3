@@ -207,41 +207,6 @@ async function updateRemoteData(): Promise<void> {
     }
 }
 
-async function sendRequest(url: string, method: string = 'GET', json: any = null): Promise<any> {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        throw new Error("Токен не найден.");
-    }
-
-    try {
-        const response = await fetch(API_URL + url, {
-            method: method,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: json ? JSON.stringify(json) : null
-        });
-
-        if (!response.ok) {
-            if (response.status == 401) {
-                toast.error('Неавторизованный запрос, возможно истекло время токена, просто авторизуйтесь снова');
-                return null;
-            }
-            toast.error(`Ошибка: ${response.statusText}`);
-            console.error(`Ошибка:`, response);
-            return null;
-        }
-
-        return response.json();
-    } catch (error: unknown) {
-        toast.error(`"Неизвестная ошибка`);
-        console.error("Неизвестная ошибка:", error);
-    }
-
-    return null;
-}
-
 export {
     calculatePayments,
     importData,
