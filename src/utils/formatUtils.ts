@@ -1,9 +1,9 @@
-
 const moneyFormatter = new Intl.NumberFormat('default', {
     style: 'currency',
     currency: 'RUB',
     useGrouping: true,
     maximumSignificantDigits: 9,
+    currencyDisplay: 'symbol'
 });
 
 export const formatDate = (date: Date | string | null | undefined): string => {
@@ -24,5 +24,7 @@ export const formatDate = (date: Date | string | null | undefined): string => {
 }
 
 export const formatMoney = (money: number): string => {
-    return moneyFormatter.format(money);
+    const formatted = moneyFormatter.format(money);
+    // Заменяем формат "RUB X,XXX" на "X,XXX ₽" для соответствия отображению в браузере
+    return formatted.replace(/RUB\s*([0-9,.-]+)/, '$1 ₽');
 }
