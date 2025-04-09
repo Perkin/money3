@@ -146,25 +146,19 @@ async function syncUpdates(): Promise<void> {
     }
 
     const lastSyncDate = localStorage.getItem('lastSyncDate') || '';
-    const toastSyncUpdates = toast.info(`Получаю обновления ${lastSyncDate}...`, {autoClose: false});
+    toast.info(`Получаю обновления ${lastSyncDate}...`, {autoClose: false});
 
-    try {
-        const result = await get<UpdateResponse>(`/updates?since=${lastSyncDate}`);
-        toast.done(toastSyncUpdates);
+    const result = await get<UpdateResponse>(`/updates?since=${lastSyncDate}`);
 
-        if (result.status === 'success' && result.data) {
-            await importData(result.data);
-            toast.success('Обновления успешно применены');
-            window.dispatchEvent(new CustomEvent('fetchInvests'));
-        } else if (result.status === 'no_updates') {
-            toast.info('Обновлений нет');
-        }
-
-        localStorage.setItem('lastSyncDate', new Date().toISOString());
-    } catch (error) {
-        toast.done(toastSyncUpdates);
-        // Ошибка уже обработана в networkUtils
+    if (result.status === 'success' && result.data) {
+        await importData(result.data);
+        toast.success('Обновления успешно применены');
+        window.dispatchEvent(new CustomEvent('fetchInvests'));
+    } else if (result.status === 'no_updates') {
+        toast.info('Обновлений нет');
     }
+
+    localStorage.setItem('lastSyncDate', new Date().toISOString());
 }
 
 async function updateRemoteData(): Promise<void> {
