@@ -135,7 +135,7 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                         isEven={isEven}
                         isDebt={!payment.isPayed && payment.paymentDate < today}
                         onClosePayment={() => {
-                            removeDebtMoney(invest.id);
+                            removeDebtMoney(invest.id!);
                             fetchPayments();
                         }}
                     />
