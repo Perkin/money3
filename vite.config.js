@@ -10,7 +10,7 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     react: ['react', 'react-dom'],
-                    vendor: ['lodash', 'moment'],
+                    vendor: ['lodash'],
                 },
             },
         },
