@@ -3,8 +3,14 @@ import InvestItem from '@/components/InvestItem';
 import CurrentDateItem from '@/components/CurrentDateItem';
 import { useCallback, useMemo, useState } from 'react';
 import TotalItem from '@/components/TotalItem';
+import { Invest } from '@/db/DbInvests';
 
-const InvestsTable = ({ invests, showPayed }) => {
+interface InvestsTableProps {
+    invests: Invest[];
+    showPayed: boolean;
+}
+
+const InvestsTable = ({ invests, showPayed }: InvestsTableProps) => {
     const today = (new Date()).getDate();
 
     const [totalInvests, setTotalInvests] = useState<Record<number, number>>({});
@@ -64,6 +70,43 @@ const InvestsTable = ({ invests, showPayed }) => {
             .reduce((acc, amount) => acc + (Number(amount) || 0), 0);
     }, [totalDebt]);
 
+    const processedInvests = useMemo(() => {
+        return invests.reduce((acc, invest, index) => {
+          const currentInvestDate = invest.createdDate.getDate();
+  
+          // Добавляем разделитель перед первым элементом с датой >= сегодня
+          if (index === 0 && currentInvestDate >= today) {
+            acc.push(<CurrentDateItem key={0} />);
+          }
+  
+          // Добавляем текущий элемент
+          acc.push(
+            <InvestItem
+              key={invest.id}
+              invest={invest}
+              onCloseInvest={() => {removeInvestMoney(invest.id!); }}
+              showPayed={showPayed}
+              isEven={index % 2 == 0}
+              addInvestMoney={addInvestMoney}
+              addIncomeMoney={addIncomeMoney}
+              addDebtMoney={addDebtMoney}
+              removeDebtMoney={removeDebtMoney}
+            />
+          );
+  
+          // Добавляем разделитель между элементами
+          if (
+            index < invests.length - 1 &&
+            currentInvestDate < today &&
+            invests[index + 1].createdDate.getDate() >= today
+          ) {
+            acc.push(<CurrentDateItem key={-1} />);
+          }
+  
+          return acc;
+        }, [] as React.ReactNode[]);
+      }, [invests, showPayed, removeInvestMoney, addInvestMoney, addIncomeMoney, addDebtMoney, removeDebtMoney]);
+
     return (
         <div className={styles.dataList}>
             <div>
@@ -75,45 +118,7 @@ const InvestsTable = ({ invests, showPayed }) => {
                 </div>
             </div>
             <div>
-                {invests
-                    .reduce((acc, invest, index) => {
-                        const currentInvestDate = invest.createdDate.getDate();
-
-                        // Добавляем разделитель перед первым элементом с датой >= сегодня
-                        if (
-                            index === 0 &&
-                            currentInvestDate >= today
-                        ) {
-                            acc.push(<CurrentDateItem key={0} />);
-                        }
-
-                        // Добавляем текущий элемент
-                        acc.push(
-                            <InvestItem
-                                key={invest.id}
-                                invest={invest}
-                                onCloseInvest={() => {removeInvestMoney(invest.id); }}
-                                showPayed={showPayed}
-                                isEven={index % 2 == 0}
-                                addInvestMoney={addInvestMoney}
-                                addIncomeMoney={addIncomeMoney}
-                                addDebtMoney={addDebtMoney}
-                                removeDebtMoney={removeDebtMoney}
-                            />
-                        );
-
-                        // Добавляем разделитель между элементами, если следующий элемент >= сегодня
-                        if (
-                            index < invests.length - 1 &&
-                            currentInvestDate < today &&
-                            invests[index + 1].createdDate.getDate() >= today
-                        ) {
-                            acc.push(<CurrentDateItem key={-1} />);
-                        }
-
-                        return acc;
-                    }, [] as React.ReactNode[])
-                }
+                {processedInvests}
                 <TotalItem title="Итого" amount={totalInvestedMoney} />
                 <TotalItem title="Прибыль" amount={totalIncomeMoney} />
                 {totalDebtMoney > 0 && <TotalItem title="Долг" amount={totalDebtMoney} isDebt={true} />}

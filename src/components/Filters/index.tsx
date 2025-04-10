@@ -1,6 +1,13 @@
 import styles from './index.module.css';
 
-const Filters = ({ activeFilter, setActiveFilter, showPayed, setShowPayed }) => {
+interface FiltersProps {
+    activeFilter: boolean;
+    setActiveFilter: Function;
+    showPayed: boolean;
+    setShowPayed: Function;
+}
+
+const Filters = ({ activeFilter, setActiveFilter, showPayed, setShowPayed }: FiltersProps) => {
     return (
         <div className={styles.dataFilter}>
             <div className={styles.filterItem}>

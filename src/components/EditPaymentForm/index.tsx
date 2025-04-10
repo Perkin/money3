@@ -3,7 +3,6 @@ import styles from './index.module.css';
 import { toast } from 'react-toastify';
 import { Payment, updatePayment } from '@/db/DbPayments.ts';
 import { updateRemoteData } from '@/db/DbUtils.ts';
-import { formatDate } from '@/utils/formatUtils.ts';
 
 interface EditPaymentFormProps {
     payment: Payment;
