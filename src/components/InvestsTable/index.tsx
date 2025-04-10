@@ -41,6 +41,14 @@ const InvestsTable = ({ invests, showPayed }) => {
         setTotalDebt(prev => ({ ...prev, [id]: amount }));
     }, []);
 
+    const removeDebtMoney = useCallback((id: number) => {
+        setTotalDebt(prev => {
+            const newState = { ...prev };
+            delete newState[id];
+            return newState;
+        });
+    }, []);
+
     const totalInvestedMoney = useMemo(() => {
         return Object.values(totalInvests)
             .reduce((acc, amount) => acc + (Number(amount) || 0), 0);
@@ -90,6 +98,7 @@ const InvestsTable = ({ invests, showPayed }) => {
                                 addInvestMoney={addInvestMoney}
                                 addIncomeMoney={addIncomeMoney}
                                 addDebtMoney={addDebtMoney}
+                                removeDebtMoney={removeDebtMoney}
                             />
                         );
 

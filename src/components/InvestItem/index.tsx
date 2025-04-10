@@ -17,9 +17,10 @@ interface InvestItemProps {
     addInvestMoney: (id: number, amount: number) => void;
     addIncomeMoney: (id: number, amount: number) => void;
     addDebtMoney: (id: number, amount: number) => void;
+    removeDebtMoney: (id: number) => void;
 }
 
-const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, addIncomeMoney, addDebtMoney}: InvestItemProps) => {
+const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, addIncomeMoney, addDebtMoney, removeDebtMoney}: InvestItemProps) => {
     const today = new Date();
     const [showEditForm, setShowEditForm] = useState(false);
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -36,7 +37,7 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
         })
 
         setPayments(filteredPayments);
-    }, [showPayed, invest, addDebtMoney]);
+    }, [showPayed, invest]);
 
     useEffect(() => {
         fetchPayments().catch((error: Error) => {
@@ -133,7 +134,10 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                         payment={payment}
                         isEven={isEven}
                         isDebt={!payment.isPayed && payment.paymentDate < today}
-                        onClosePayment={fetchPayments}
+                        onClosePayment={() => {
+                            removeDebtMoney(invest.id);
+                            fetchPayments();
+                        }}
                     />
                 ) : null
             )}
