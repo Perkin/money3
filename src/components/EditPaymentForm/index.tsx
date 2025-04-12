@@ -10,7 +10,10 @@ interface EditPaymentFormProps {
 }
 
 const formatDateForInput = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 const EditPaymentForm = ({ payment, onClose }: EditPaymentFormProps) => {
@@ -58,7 +61,24 @@ const EditPaymentForm = ({ payment, onClose }: EditPaymentFormProps) => {
                 <input 
                     type="date" 
                     value={formatDateForInput(paymentDate)} 
-                    onChange={(e) => setPaymentDate(new Date(e.target.value))} 
+                    onChange={(e) => {
+                        const dateString = e.target.value;
+                        
+                        if (dateString) {
+                            const [yearStr, monthStr, dayStr] = dateString.split('-');
+                            const year = parseInt(yearStr, 10);
+                            const month = parseInt(monthStr, 10) - 1;
+                            const day = parseInt(dayStr, 10);
+                            
+                            const newDate = new Date();
+                            
+                            newDate.setFullYear(year, month, day);
+                            
+                            newDate.setHours(0, 0, 0, 0);
+                            
+                            setPaymentDate(newDate);
+                        }
+                    }} 
                     required 
                 />
             </div>

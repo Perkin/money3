@@ -102,20 +102,53 @@ async function importData(
     }
 
     for (const invest of importData.invests) {
+        // Преобразуем строковые даты в объекты Date
+        const importedCreatedDate = new Date(invest.createdDate);
+        const updatedAtDate = new Date(invest.updatedAt);
+        
+        // Нормализуем даты к 00:00:00
+        const year = importedCreatedDate.getFullYear();
+        const month = importedCreatedDate.getMonth();
+        const day = importedCreatedDate.getDate();
+        
+        const normalizedCreatedDate = new Date(year, month, day, 0, 0, 0, 0);
+        
+        // Обрабатываем closedDate, если он существует
+        let normalizedClosedDate = null;
+        if (invest.closedDate) {
+            const closedDate = new Date(invest.closedDate);
+            const closedYear = closedDate.getFullYear();
+            const closedMonth = closedDate.getMonth();
+            const closedDay = closedDate.getDate();
+            
+            normalizedClosedDate = new Date(closedYear, closedMonth, closedDay, 0, 0, 0, 0);
+        }
+
         const newInvest = {
             ...invest,
-            createdDate: new Date(invest.createdDate),
-            updatedAt: new Date(invest.updatedAt),
-            closedDate: invest.closedDate ? new Date(invest.closedDate) : undefined
+            createdDate: normalizedCreatedDate,
+            updatedAt: updatedAtDate,
+            closedDate: normalizedClosedDate
         };
         await investStore.put(newInvest);
     }
 
     for (const payment of importData.payments) {
+        // Преобразуем строковые даты в объекты Date
+        const importedPaymentDate = new Date(payment.paymentDate);
+        const updatedAtDate = new Date(payment.updatedAt);
+        
+        // Нормализуем дату платежа к 00:00:00
+        const year = importedPaymentDate.getFullYear();
+        const month = importedPaymentDate.getMonth();
+        const day = importedPaymentDate.getDate();
+        
+        const normalizedPaymentDate = new Date(year, month, day, 0, 0, 0, 0);
+        
         const newPayment = {
             ...payment,
-            paymentDate: new Date(payment.paymentDate),
-            updatedAt: new Date(payment.updatedAt)
+            paymentDate: normalizedPaymentDate,
+            updatedAt: updatedAtDate
         };
         await paymentStore.put(newPayment);
     }
