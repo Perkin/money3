@@ -49,7 +49,7 @@ const InvestsTable = ({ invests, showPayed }: InvestsTableProps) => {
     const totalDebtMoney = useMemo(() => {
         let total = 0;
         
-        Object.entries(paymentsData).forEach(([investId, payments]) => {
+        Object.entries(paymentsData).forEach(([, payments]) => {
             payments.forEach(payment => {
                 if (!payment.isPayed && payment.paymentDate < today) {
                     total += payment.money;
@@ -79,7 +79,6 @@ const InvestsTable = ({ invests, showPayed }: InvestsTableProps) => {
                     <InvestItem
                         key={invest.id}
                         invest={invest}
-                        showPayed={showPayed}
                         isEven={index % 2 === 0}
                         payments={investPayments}
                         onRefreshData={() => window.dispatchEvent(new CustomEvent('fetchInvests'))}
@@ -98,7 +97,7 @@ const InvestsTable = ({ invests, showPayed }: InvestsTableProps) => {
 
             return result;
         }).flat();
-    }, [invests, paymentsData, showPayed, todayDate]);
+    }, [invests, paymentsData, todayDate]);
 
     return (
         <div className={styles.dataList}>

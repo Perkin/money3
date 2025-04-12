@@ -11,13 +11,12 @@ import Popup from '@/components/Popup';
 
 interface InvestItemProps {
     invest: Invest;
-    showPayed: boolean;
     isEven: boolean;
     payments: Payment[];
     onRefreshData: () => void;
 }
 
-const InvestItem = ({ invest, showPayed, isEven, payments, onRefreshData }: InvestItemProps) => {
+const InvestItem = ({ invest, isEven, payments, onRefreshData }: InvestItemProps) => {
     const today = new Date();
     const [showEditForm, setShowEditForm] = useState(false);
 
