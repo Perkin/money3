@@ -55,20 +55,59 @@ declare global {
 
 // Обработка сообщений от Service Worker
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (event) => {
+    navigator.serviceWorker.addEventListener('message', event => {
         console.log('Получено сообщение от ServiceWorker:', event.data);
         
-        if (event.data && event.data.type === 'app-version') {
-            // Просто выводим версию в консоль, но не обновляем страницу
-            console.log(`Service Worker версия: ${event.data.version}`);
-        } else if (event.data && event.data.type === 'status') {
+        // Обработка запроса на загрузку состояния уведомлений из localStorage
+        if (event.data && event.data.type === 'get-notification-state') {
+            try {
+                const storedState = localStorage.getItem('notificationState');
+                let state = null;
+                
+                if (storedState) {
+                    state = JSON.parse(storedState);
+                    console.log('Загружено состояние уведомлений из localStorage:', state);
+                }
+                
+                // Отправляем состояние в Service Worker
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'notification-state-from-client',
+                        state: state
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке состояния уведомлений из localStorage:', error);
+            }
+        }
+        
+        // Обработка запроса на сохранение состояния уведомлений в localStorage
+        else if (event.data && event.data.type === 'save-notification-state') {
+            try {
+                const state = event.data.state;
+                localStorage.setItem('notificationState', JSON.stringify(state));
+                console.log('Состояние уведомлений сохранено в localStorage:', state);
+            } catch (error) {
+                console.error('Ошибка при сохранении состояния уведомлений в localStorage:', error);
+            }
+        }
+        
+        // Другие типы сообщений обрабатываются здесь
+        else if (event.data && event.data.type === 'status') {
             updateLoadingStatus(event.data.message);
-        } else if (event.data && event.data.type === 'activated') {
-            // Когда Service Worker активирован, показываем приложение
-            setTimeout(markAppAsLoaded, 500);
-        } else if (event.data && event.data.type === 'error') {
+        }
+        else if (event.data && event.data.type === 'activated') {
+            console.log('Service Worker активирован, версия:', event.data.version);
+            markAppAsLoaded();
+        }
+        else if (event.data && event.data.type === 'app-version') {
+            console.log('Версия приложения:', event.data.version);
+        }
+        else if (event.data && event.data.type === 'error') {
             console.error('Ошибка Service Worker:', event.data.message);
-            // Можно добавить всплывающее уведомление для пользователя
+        }
+        else if (event.data && event.data.type === 'notification-shown') {
+            console.log(`Показано уведомление о ${event.data.count} долгах на сумму ${event.data.amount}`);
         }
     });
 }
@@ -98,7 +137,7 @@ if ('serviceWorker' in navigator) {
                         console.log('Новый Service Worker установлен и готов к использованию');
                         updateLoadingStatus('Обновление готово к установке');
                         
-                        // Показываем пользователю сообщение с возможностью обновления, вместо автоматического обновления
+                        // Показываем пользователю сообщение с возможностью обновления
                         if (confirm('Доступна новая версия приложения. Обновить сейчас?')) {
                             updateLoadingStatus('Применяю обновление...');
                             window.location.reload();
@@ -113,8 +152,39 @@ if ('serviceWorker' in navigator) {
             
             // Запрашиваем разрешение на уведомления
             if ('Notification' in window) {
-                const permission = await Notification.requestPermission();
+                let permission = Notification.permission;
+                
+                if (permission !== 'granted' && permission !== 'denied') {
+                    permission = await Notification.requestPermission();
+                }
+                
                 console.log('Разрешение на уведомления:', permission);
+                
+                // Если разрешение получено, отправляем тестовое уведомление при первом запуске
+                if (permission === 'granted') {
+                    // Небольшая задержка, чтобы не мешать загрузке приложения
+                    setTimeout(() => {
+                        try {
+                            // Проверяем на десктопе - можем использовать обычное API уведомлений
+                            if (!('serviceWorker' in navigator) || !registration.active) {
+                                // Просто показываем уведомление о запуске приложения
+                                new Notification('Money Debt готов к работе', {
+                                    body: 'Приложение успешно загружено',
+                                    icon: '/money3/icon-192x192.png'
+                                });
+                            } else {
+                                // Тихая проверка долгов (без обязательного показа уведомления)
+                                // force=false означает, что уведомление покажется только при новых долгах
+                                registration.active.postMessage({ 
+                                    type: 'check-debts',
+                                    force: false 
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Ошибка при отправке тестового уведомления:', e);
+                        }
+                    }, 3000);
+                }
             }
             
             // Регистрируем периодическую синхронизацию
@@ -133,18 +203,27 @@ if ('serviceWorker' in navigator) {
                         console.log('Периодическая синхронизация успешно зарегистрирована');
                     } else {
                         console.log('Нет разрешения на периодическую синхронизацию');
-                        // Запускаем разовую проверку долгов при загрузке
-                        registration.active?.postMessage({ type: 'check-debts' });
+                        // Запускаем тихую проверку долгов при загрузке
+                        registration.active?.postMessage({ 
+                            type: 'check-debts',
+                            force: false
+                        });
                     }
                 } catch (error) {
                     console.error('Ошибка при регистрации периодической синхронизации:', error);
-                    // Запускаем разовую проверку долгов при загрузке
-                    registration.active?.postMessage({ type: 'check-debts' });
+                    // Запускаем тихую проверку долгов при загрузке
+                    registration.active?.postMessage({ 
+                        type: 'check-debts',
+                        force: false 
+                    });
                 }
             } else {
                 console.log('Периодическая синхронизация не поддерживается');
-                // Запускаем разовую проверку долгов при загрузке
-                registration.active?.postMessage({ type: 'check-debts' });
+                // Запускаем тихую проверку долгов при загрузке
+                registration.active?.postMessage({ 
+                    type: 'check-debts',
+                    force: false
+                });
                 
                 // Регистрируем обычную фоновую синхронизацию в качестве резервного варианта
                 if (registration.sync) {

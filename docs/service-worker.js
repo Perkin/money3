@@ -1,5 +1,5 @@
 // Текущая версия приложения
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 // Имя кэша, чтобы различать версии
 const CACHE_NAME = 'money3-cache-v' + APP_VERSION;
 
@@ -22,6 +22,12 @@ const CACHE_ASSETS = [
     '/money3/manifest.json',
     '/money3/db-config.js'
 ];
+
+// Добавляем хранилище для отслеживания показанных уведомлений
+let shownNotifications = {
+    payments: new Set(), // Хранит ID платежей, о которых уже были уведомления
+    lastShown: {} // Время последнего показа уведомления
+};
 
 // Отправляем сообщение клиентам
 function sendMessageToClients(message) {
@@ -74,10 +80,12 @@ self.addEventListener('activate', event => {
         version: APP_VERSION 
     });
     
-    // Берем контроль над всеми клиентами сразу
+    // Загружаем состояние уведомлений
     event.waitUntil(
         Promise.all([
+            // Берем контроль над всеми клиентами сразу
             clients.claim(),
+            // Удаляем старые версии кэша
             caches.keys().then(cacheNames => {
                 return Promise.all(
                     cacheNames.map(cache => {
@@ -92,7 +100,9 @@ self.addEventListener('activate', event => {
                         }
                     })
                 );
-            })
+            }),
+            // Пытаемся загрузить состояние уведомлений
+            loadNotificationState()
         ]).then(() => {
             sendMessageToClients({ 
                 type: 'status', 
@@ -155,36 +165,54 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// Обработка сообщений от основного скрипта
-self.addEventListener('message', event => {
-    console.log('[ServiceWorker] Получено сообщение:', event.data);
-    
-    if (event.data && event.data.type === 'check-debts') {
-        checkForNewDebts();
-    } else if (event.data && event.data.type === 'skipWaiting') {
-        self.skipWaiting();
-    } else if (event.data && event.data.type === 'get-version') {
-        // Отправляем информацию о версии
-        event.source.postMessage({
-            type: 'app-version',
-            version: APP_VERSION
-        });
+// Функция загрузки информации о показанных уведомлениях из localStorage
+async function loadNotificationState() {
+    try {
+        // В Service Worker нет прямого доступа к localStorage, поэтому используем клиент
+        const clients = await self.clients.matchAll();
+        if (clients.length > 0) {
+            // Отправляем запрос клиенту на получение данных из localStorage
+            clients[0].postMessage({
+                type: 'get-notification-state'
+            });
+            
+            // Данные будут получены как сообщение от клиента
+            console.log('[ServiceWorker] Запрос на загрузку состояния уведомлений отправлен клиенту');
+        } else {
+            console.log('[ServiceWorker] Нет доступных клиентов для загрузки состояния');
+        }
+    } catch (error) {
+        console.error('[ServiceWorker] Ошибка при загрузке состояния уведомлений:', error);
     }
-});
+}
 
-// Обработка периодической синхронизации для проверки долгов
-self.addEventListener('periodicsync', event => {
-    if (event.tag === 'check-debts') {
-        event.waitUntil(checkForNewDebts());
+// Функция сохранения информации о показанных уведомлениях в localStorage
+async function saveNotificationState() {
+    try {
+        // В Service Worker нет прямого доступа к localStorage, поэтому используем клиент
+        const clients = await self.clients.matchAll();
+        if (clients.length > 0) {
+            // Преобразуем Set в массив для хранения
+            const state = {
+                payments: Array.from(shownNotifications.payments),
+                lastShown: shownNotifications.lastShown,
+                updatedAt: new Date().toISOString()
+            };
+            
+            // Отправляем данные клиенту для сохранения в localStorage
+            clients[0].postMessage({
+                type: 'save-notification-state',
+                state: state
+            });
+            
+            console.log('[ServiceWorker] Запрос на сохранение состояния уведомлений отправлен клиенту');
+        } else {
+            console.log('[ServiceWorker] Нет доступных клиентов для сохранения состояния');
+        }
+    } catch (error) {
+        console.error('[ServiceWorker] Ошибка при сохранении состояния уведомлений:', error);
     }
-});
-
-// Обработка события синхронизации
-self.addEventListener('sync', event => {
-    if (event.tag === 'check-debts') {
-        event.waitUntil(checkForNewDebts());
-    }
-});
+}
 
 // Функция открытия базы данных
 function openDB() {
@@ -259,19 +287,31 @@ async function checkForNewDebts() {
         
         console.log('Найдено долгов на сегодня:', todayDebts.length);
         
-        // Если есть новые долги, отправляем уведомление
-        if (todayDebts.length > 0) {
-            const totalDebt = todayDebts.reduce((sum, payment) => sum + payment.money, 0);
+        // Проверяем, есть ли новые долги (которые ещё не показывались)
+        // и прошло ли достаточно времени с последнего уведомления
+        const now = Date.now();
+        const lastNotificationTime = shownNotifications.lastShown['today'] || 0;
+        const timeSinceLastNotification = now - lastNotificationTime;
+        
+        // Не показываем уведомления чаще, чем раз в час (3600000 мс)
+        const minimumInterval = 3600000;
+        
+        // Фильтруем только те долги, о которых еще не было уведомлений
+        const newDebts = todayDebts.filter(payment => !shownNotifications.payments.has(payment.id));
+        
+        if (newDebts.length > 0 && (timeSinceLastNotification > minimumInterval)) {
+            const totalDebt = newDebts.reduce((sum, payment) => sum + payment.money, 0);
             
+            // Отправляем уведомление только о новых долгах
             self.registration.showNotification('Новые платежи на сегодня', {
-                body: `У вас ${todayDebts.length} новых платежей на сумму ${totalDebt.toLocaleString()} ₽`,
+                body: `У вас ${newDebts.length} новых платежей на сумму ${totalDebt.toLocaleString()} ₽`,
                 icon: '/money3/icon-192x192.png',
                 badge: '/money3/favicon-32x32.png',
                 tag: 'new-debts',
                 vibrate: [200, 100, 200],
                 data: {
                     dateOfArrival: Date.now(),
-                    debtCount: todayDebts.length,
+                    debtCount: newDebts.length,
                     debtAmount: totalDebt
                 },
                 actions: [
@@ -281,8 +321,24 @@ async function checkForNewDebts() {
                     }
                 ]
             });
+            
+            // Сохраняем информацию о показанных уведомлениях
+            shownNotifications.lastShown['today'] = now;
+            newDebts.forEach(payment => shownNotifications.payments.add(payment.id));
+            
+            // Сохраняем обновленное состояние
+            saveNotificationState();
+            
+            // Информируем клиентов
+            sendMessageToClients({
+                type: 'notification-shown',
+                count: newDebts.length,
+                amount: totalDebt
+            });
+        } else if (todayDebts.length > 0 && newDebts.length === 0) {
+            console.log('Все долги на сегодня уже были показаны в уведомлениях');
         } else {
-            console.log('Долгов на сегодня не найдено');
+            console.log('Долгов на сегодня не найдено или интервал между уведомлениями слишком мал');
         }
     } catch (error) {
         console.error('Ошибка при проверке долгов:', error);
@@ -299,5 +355,65 @@ self.addEventListener('notificationclick', event => {
     } else {
         // Действие по умолчанию - также открываем приложение
         clients.openWindow('/money3/');
+    }
+});
+
+// Обработка сообщений от основного скрипта
+self.addEventListener('message', event => {
+    console.log('[ServiceWorker] Получено сообщение:', event.data);
+    
+    if (event.data && event.data.type === 'check-debts') {
+        // Если это явный запрос на проверку долгов (например, из кнопки "Проверить долги"),
+        // то сбрасываем таймер ограничения частоты и проверяем снова
+        if (event.data.force) {
+            shownNotifications.lastShown['today'] = 0; // Сброс таймера
+        }
+        checkForNewDebts();
+    } else if (event.data && event.data.type === 'skipWaiting') {
+        self.skipWaiting();
+    } else if (event.data && event.data.type === 'get-version') {
+        // Отправляем информацию о версии
+        event.source.postMessage({
+            type: 'app-version',
+            version: APP_VERSION
+        });
+    } else if (event.data && event.data.type === 'reset-notifications') {
+        // Сбрасываем хранилище показанных уведомлений
+        shownNotifications = {
+            payments: new Set(),
+            lastShown: {}
+        };
+        // Сохраняем обновленное состояние
+        saveNotificationState();
+        console.log('[ServiceWorker] Хранилище уведомлений сброшено');
+        event.source.postMessage({
+            type: 'notifications-reset',
+            success: true
+        });
+    } else if (event.data && event.data.type === 'notification-state-from-client') {
+        // Получаем состояние от клиента (из localStorage)
+        if (event.data.state) {
+            const state = event.data.state;
+            console.log('[ServiceWorker] Получено состояние уведомлений от клиента:', state);
+            // Преобразуем массив ID обратно в Set
+            shownNotifications = {
+                payments: new Set(state.payments || []),
+                lastShown: state.lastShown || {}
+            };
+        }
+    }
+});
+
+// Обработка периодической синхронизации для проверки долгов
+self.addEventListener('periodicsync', event => {
+    if (event.tag === 'check-debts') {
+        event.waitUntil(checkForNewDebts());
+    }
+});
+
+// Обработка события синхронизации
+self.addEventListener('sync', event => {
+    if (event.tag === 'check-debts') {
+        event.waitUntil(checkForNewDebts());
     }
 });

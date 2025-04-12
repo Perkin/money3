@@ -25,8 +25,38 @@ const SettingsForm = () => {
     };
 
     const handleTestNotification = async () => {
-        await checkForDebts();
+        await checkForDebts(true);
         toast.info('Запрос на проверку долгов отправлен');
+    };
+
+    const handleCleanupNotifications = async () => {
+        try {
+            // Если Service Worker не поддерживается, очищаем только localStorage
+            if (!('serviceWorker' in navigator)) {
+                localStorage.removeItem('notificationState');
+                toast.success('История уведомлений очищена');
+                return;
+            }
+            
+            // Получаем регистрацию Service Worker
+            const registration = await navigator.serviceWorker.ready;
+            
+            // Проверяем, активен ли Service Worker
+            if (registration.active) {
+                // Отправляем сообщение для очистки уведомлений
+                registration.active.postMessage({ 
+                    type: 'cleanup-notifications'
+                });
+                toast.success('Запрос на очистку истории уведомлений отправлен');
+            } else {
+                // Очищаем только localStorage
+                localStorage.removeItem('notificationState');
+                toast.success('История уведомлений очищена');
+            }
+        } catch (error) {
+            console.error('Ошибка при очистке истории уведомлений:', error);
+            toast.error('Не удалось очистить историю уведомлений');
+        }
     };
 
     // Форматируем дату сборки
@@ -43,7 +73,7 @@ const SettingsForm = () => {
             <h2>Настройки</h2>
             
             <div className={styles.formGroup}>
-                <label>Уведомления</label>
+                <label>Управление уведомлениями</label>
                 <div className={styles.notificationStatus}>
                     Статус: {
                         notificationStatus === 'granted' ? 'Разрешены' :
@@ -59,12 +89,20 @@ const SettingsForm = () => {
                         {notificationStatus === 'granted' ? 'Уведомления разрешены' : 'Разрешить уведомления'}
                     </button>
                     {notificationStatus === 'granted' && (
-                        <button 
-                            onClick={handleTestNotification}
-                            className={styles.testButton}
-                        >
-                            Проверить долги
-                        </button>
+                        <>
+                            <button 
+                                onClick={handleTestNotification}
+                                className={styles.testButton}
+                            >
+                                Проверить долги
+                            </button>
+                            <button 
+                                onClick={handleCleanupNotifications}
+                                className={styles.cleanupButton}
+                            >
+                                Очистить историю уведомлений
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
