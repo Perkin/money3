@@ -13,10 +13,93 @@
         <link rel="icon" href="/favicon.ico">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <script src="/db-config.js"></script>
+        <style>
+            /* Стили ТОЛЬКО для индикатора загрузки, изолированные от основного приложения */
+            #app-loading {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #000000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                font-family: Arial, sans-serif;
+            }
+            #app-loading-spinner {
+                width: 50px;
+                height: 50px;
+                border: 5px solid #333333;
+                border-top: 5px solid #AF4C50;
+                border-radius: 50%;
+                animation: spinner-spin 1s linear infinite;
+                margin-bottom: 20px;
+            }
+            #app-loading-message {
+                color: #ffffff;
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+            #app-loading-status {
+                color: #cccccc;
+                font-size: 14px;
+            }
+            @keyframes spinner-spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            /* Сначала скрываем root контейнер */
+            body:not(.app-loaded) #root {
+                visibility: hidden;
+            }
+            /* Когда приложение загружено, скрываем индикатор загрузки */
+            body.app-loaded #app-loading {
+                display: none;
+            }
+        </style>
     </head>
     <body>
+        <!-- Индикатор загрузки -->
+        <div id="app-loading">
+            <div id="app-loading-spinner"></div>
+            <div id="app-loading-message">Загрузка приложения...</div>
+            <div id="app-loading-status">Подключение...</div>
+        </div>
         <div id="root"></div>
         <script type="module" src="/src/main.tsx"></script>
         <noscript>Для работы приложения требуется JavaScript.</noscript>
+        <script>
+            // Показываем статусы загрузки
+            const loadingStatus = document.getElementById('app-loading-status');
+            const messages = [
+                'Проверка обновлений...',
+                'Подготовка данных...',
+                'Активация сервис-воркера...',
+                'Загрузка ресурсов...',
+                'Почти готово...'
+            ];
+            
+            let messageIndex = 0;
+            const statusInterval = setInterval(() => {
+                if (messageIndex < messages.length) {
+                    loadingStatus.textContent = messages[messageIndex];
+                    messageIndex++;
+                } else {
+                    clearInterval(statusInterval);
+                }
+            }, 1000);
+            
+            // Таймаут для принудительного обновления страницы, если что-то пошло не так
+            setTimeout(() => {
+                if (!document.body.classList.contains('app-loaded')) {
+                    loadingStatus.textContent = 'Перезагрузка страницы...';
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+            }, 15000);
+        </script>
     </body>
 </html>

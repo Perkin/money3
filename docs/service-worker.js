@@ -1,5 +1,5 @@
 // Имя кэша, чтобы различать версии
-const CACHE_NAME = 'money3-cache-v14';
+const CACHE_NAME = 'money3-cache-v15';
 
 // Резервные значения для конфигурации БД, если db-config.js не загрузится
 const DEFAULT_DB_CONFIG = {
@@ -21,9 +21,19 @@ const CACHE_ASSETS = [
     '/money3/db-config.js'
 ];
 
+// Отправляем сообщение клиентам
+function sendMessageToClients(message) {
+    self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+            client.postMessage(message);
+        });
+    });
+}
+
 // Устанавливаем кэш
 self.addEventListener('install', event => {
     console.log('[ServiceWorker] Установка');
+    sendMessageToClients({ type: 'status', message: 'Установка Service Worker...' });
     
     // Принудительно активируем новый service worker сразу
     self.skipWaiting();
@@ -32,7 +42,11 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[ServiceWorker] Кэшируем файлы...');
+                sendMessageToClients({ type: 'status', message: 'Кэширование файлов...' });
                 return cache.addAll(CACHE_ASSETS);
+            })
+            .then(() => {
+                sendMessageToClients({ type: 'status', message: 'Кэширование завершено' });
             })
     );
 });
@@ -40,20 +54,26 @@ self.addEventListener('install', event => {
 // Активируем воркер и удаляем старые кэши
 self.addEventListener('activate', event => {
     console.log('[ServiceWorker] Активация');
+    sendMessageToClients({ type: 'status', message: 'Активация Service Worker...' });
     
     // Берем контроль над всеми клиентами сразу
-    event.waitUntil(clients.claim());
-    
     event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cache => {
-                    if (cache !== CACHE_NAME) {
-                        console.log('[ServiceWorker] Удаляем старый кэш:', cache);
-                        return caches.delete(cache);
-                    }
-                })
-            );
+        Promise.all([
+            clients.claim(),
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cache => {
+                        if (cache !== CACHE_NAME) {
+                            console.log('[ServiceWorker] Удаляем старый кэш:', cache);
+                            sendMessageToClients({ type: 'status', message: 'Удаление старого кэша...' });
+                            return caches.delete(cache);
+                        }
+                    })
+                );
+            })
+        ]).then(() => {
+            sendMessageToClients({ type: 'status', message: 'Service Worker активирован' });
+            sendMessageToClients({ type: 'activated' });
         })
     );
 });
@@ -85,6 +105,12 @@ self.addEventListener('fetch', event => {
                     })
                     .catch(error => {
                         console.error('[ServiceWorker] Ошибка при получении ответа:', error);
+                        sendMessageToClients({ 
+                            type: 'error', 
+                            message: 'Ошибка сети при получении ресурса',
+                            url: event.request.url 
+                        });
+                        
                         // Возвращаем ошибку, чтобы цепочка промисов не прерывалась
                         return new Response('Network error', { 
                             status: 500, 
@@ -99,6 +125,17 @@ self.addEventListener('fetch', event => {
     );
 });
 
+// Обработка сообщений от основного скрипта
+self.addEventListener('message', event => {
+    console.log('[ServiceWorker] Получено сообщение:', event.data);
+    
+    if (event.data && event.data.type === 'check-debts') {
+        checkForNewDebts();
+    } else if (event.data && event.data.type === 'skipWaiting') {
+        self.skipWaiting();
+    }
+});
+
 // Обработка периодической синхронизации для проверки долгов
 self.addEventListener('periodicsync', event => {
     if (event.tag === 'check-debts') {
@@ -110,13 +147,6 @@ self.addEventListener('periodicsync', event => {
 self.addEventListener('sync', event => {
     if (event.tag === 'check-debts') {
         event.waitUntil(checkForNewDebts());
-    }
-});
-
-// Обработка сообщений от основного скрипта
-self.addEventListener('message', event => {
-    if (event.data && event.data.type === 'check-debts') {
-        checkForNewDebts();
     }
 });
 
