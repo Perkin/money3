@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import styles from './index.module.css';
 import { closeInvest, Invest } from '@/db/DbInvests.ts';
-import { closePayment, getPayments, Payment, PaymentFilter } from '@/db/DbPayments.ts';
+import { closePayment, Payment } from '@/db/DbPayments.ts';
 import { toast } from 'react-toastify';
 import PaymentItem from '@/components/PaymentItem';
 import { defaultIncomeRatio, updateRemoteData } from '@/db/DbUtils';
@@ -13,34 +13,13 @@ interface InvestItemProps {
     invest: Invest;
     showPayed: boolean;
     isEven: boolean;
-    addDebtMoney: (id: number, amount: number) => void;
-    removeDebtMoney: (id: number) => void;
+    payments: Payment[];
+    onRefreshData: () => void;
 }
 
-const InvestItem = ({ invest, showPayed, isEven, addDebtMoney, removeDebtMoney}: InvestItemProps) => {
+const InvestItem = ({ invest, showPayed, isEven, payments, onRefreshData }: InvestItemProps) => {
     const today = new Date();
     const [showEditForm, setShowEditForm] = useState(false);
-    const [payments, setPayments] = useState<Payment[]>([]);
-
-    const fetchPayments = useCallback(async () => {
-        const filter : PaymentFilter = {id: invest.id};
-        const allPayments = await getPayments(filter);
-        const filteredPayments = allPayments.filter(payment => showPayed || !payment.isPayed);
-
-        filteredPayments.forEach((payment: Payment) => {
-            if (!payment.isPayed && payment.paymentDate < today && invest.id !== undefined) {
-                addDebtMoney(invest.id, payment.money);
-            }
-        })
-
-        setPayments(filteredPayments);
-    }, [showPayed, invest]);
-
-    useEffect(() => {
-        fetchPayments().catch((error: Error) => {
-            console.error("Ошибка в fetchPayments:", error);
-        });
-    }, [fetchPayments]);
 
     const handleCloseInvest = async (investId: number | undefined) => {
         if (!investId || !confirm('Точно закрыть?')) {
@@ -51,7 +30,6 @@ const InvestItem = ({ invest, showPayed, isEven, addDebtMoney, removeDebtMoney}:
             const closedInvestId = await closeInvest(investId);
             if (Number.isInteger(closedInvestId) && closedInvestId === investId) {
                 // Закрываем все открытые платежи
-                const payments = await getPayments({id: investId});
                 for (const payment of payments) {
                     if (!payment.isPayed && payment.id !== undefined) {
                         try {
@@ -68,7 +46,7 @@ const InvestItem = ({ invest, showPayed, isEven, addDebtMoney, removeDebtMoney}:
                 }
 
                 toast.success('Инвестиция закрыта');
-                window.dispatchEvent(new CustomEvent('fetchInvests'));
+                onRefreshData();
                 await updateRemoteData();
             } else {
                 toast.error('Не удалось закрыть инвестицию');
@@ -111,7 +89,7 @@ const InvestItem = ({ invest, showPayed, isEven, addDebtMoney, removeDebtMoney}:
                         invest={invest} 
                         onClose={() => {
                             setShowEditForm(false);
-                            window.dispatchEvent(new CustomEvent('fetchInvests'));
+                            onRefreshData();
                         }} 
                     />
                 </Popup>
@@ -123,10 +101,7 @@ const InvestItem = ({ invest, showPayed, isEven, addDebtMoney, removeDebtMoney}:
                         payment={payment}
                         isEven={isEven}
                         isDebt={!payment.isPayed && payment.paymentDate < today}
-                        onClosePayment={() => {
-                            removeDebtMoney(invest.id!);
-                            fetchPayments();
-                        }}
+                        onClosePayment={onRefreshData}
                     />
                 ) : null
             )}
