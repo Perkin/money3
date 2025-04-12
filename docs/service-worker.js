@@ -358,6 +358,55 @@ self.addEventListener('notificationclick', event => {
     }
 });
 
+// Функция очистки старых уведомлений
+function cleanupOldNotifications() {
+    try {
+        // Получаем текущую дату
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+        
+        // Удаляем записи старше 3 дней
+        const threeDaysAgo = new Date(today);
+        threeDaysAgo.setDate(today.getDate() - 3);
+        
+        // Ограничиваем количество сохраняемых ID платежей (максимум 100)
+        const maxPaymentIds = 100;
+        
+        // Если сохранено слишком много ID
+        if (shownNotifications.payments.size > maxPaymentIds) {
+            console.log(`[ServiceWorker] Очистка хранилища уведомлений: было ${shownNotifications.payments.size} записей`);
+            
+            // Преобразуем Set в массив, чтобы работать с индексами
+            const paymentsArray = Array.from(shownNotifications.payments);
+            
+            // Оставляем только последние maxPaymentIds записей
+            const newPaymentsArray = paymentsArray.slice(-maxPaymentIds);
+            
+            // Обновляем хранилище
+            shownNotifications.payments = new Set(newPaymentsArray);
+            
+            console.log(`[ServiceWorker] После очистки: ${shownNotifications.payments.size} записей`);
+            
+            // Также удаляем старые записи в lastShown
+            const daysToKeep = ['today'];
+            for (const day in shownNotifications.lastShown) {
+                if (!daysToKeep.includes(day)) {
+                    delete shownNotifications.lastShown[day];
+                }
+            }
+            
+            // Сохраняем обновленное состояние
+            return saveNotificationState();
+        }
+        
+        return Promise.resolve();
+    } catch (error) {
+        console.error('[ServiceWorker] Ошибка при очистке уведомлений:', error);
+        return Promise.resolve();
+    }
+}
+
 // Обработка сообщений от основного скрипта
 self.addEventListener('message', event => {
     console.log('[ServiceWorker] Получено сообщение:', event.data);
@@ -368,7 +417,11 @@ self.addEventListener('message', event => {
         if (event.data.force) {
             shownNotifications.lastShown['today'] = 0; // Сброс таймера
         }
-        checkForNewDebts();
+        
+        // Очищаем старые уведомления перед проверкой
+        cleanupOldNotifications().then(() => {
+            checkForNewDebts();
+        });
     } else if (event.data && event.data.type === 'skipWaiting') {
         self.skipWaiting();
     } else if (event.data && event.data.type === 'get-version') {
@@ -400,7 +453,18 @@ self.addEventListener('message', event => {
                 payments: new Set(state.payments || []),
                 lastShown: state.lastShown || {}
             };
+            
+            // Очищаем старые уведомления
+            cleanupOldNotifications();
         }
+    } else if (event.data && event.data.type === 'cleanup-notifications') {
+        // Ручная очистка хранилища уведомлений
+        cleanupOldNotifications().then(() => {
+            event.source.postMessage({
+                type: 'notifications-cleaned',
+                count: shownNotifications.payments.size
+            });
+        });
     }
 });
 
