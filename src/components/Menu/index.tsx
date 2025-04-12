@@ -67,6 +67,7 @@ const Menu = () => {
 
     const handleSyncUpdates = async () => {
         try {
+            localStorage.setItem('lastSyncDate', '');
             await syncUpdates();
             toast.success('Данные успешно синхронизированы');
         } catch (error) {
