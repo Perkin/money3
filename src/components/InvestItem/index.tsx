@@ -11,16 +11,13 @@ import Popup from '@/components/Popup';
 
 interface InvestItemProps {
     invest: Invest;
-    onCloseInvest: () => void;
     showPayed: boolean;
     isEven: boolean;
-    addInvestMoney: (id: number, amount: number) => void;
-    addIncomeMoney: (id: number, amount: number) => void;
     addDebtMoney: (id: number, amount: number) => void;
     removeDebtMoney: (id: number) => void;
 }
 
-const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, addIncomeMoney, addDebtMoney, removeDebtMoney}: InvestItemProps) => {
+const InvestItem = ({ invest, showPayed, isEven, addDebtMoney, removeDebtMoney}: InvestItemProps) => {
     const today = new Date();
     const [showEditForm, setShowEditForm] = useState(false);
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -44,13 +41,6 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
             console.error("Ошибка в fetchPayments:", error);
         });
     }, [fetchPayments]);
-
-    useEffect(() => {
-        if (invest.isActive && invest.id !== undefined) {
-            addInvestMoney(invest.id, invest.money);
-            addIncomeMoney(invest.id, invest.money * (invest.incomeRatio || defaultIncomeRatio));
-        }
-    }, [invest, addInvestMoney, addIncomeMoney]);
 
     const handleCloseInvest = async (investId: number | undefined) => {
         if (!investId || !confirm('Точно закрыть?')) {
@@ -78,7 +68,6 @@ const InvestItem = ({ invest, onCloseInvest, showPayed, isEven, addInvestMoney, 
                 }
 
                 toast.success('Инвестиция закрыта');
-                onCloseInvest();
                 window.dispatchEvent(new CustomEvent('fetchInvests'));
                 await updateRemoteData();
             } else {
