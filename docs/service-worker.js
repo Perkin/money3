@@ -1,5 +1,5 @@
 // Имя кэша, чтобы различать версии
-const CACHE_NAME = 'money3-cache-v13';
+const CACHE_NAME = 'money3-cache-v14';
 
 // Резервные значения для конфигурации БД, если db-config.js не загрузится
 const DEFAULT_DB_CONFIG = {
@@ -7,7 +7,7 @@ const DEFAULT_DB_CONFIG = {
     DB_VERSION: 8
 };
 
-// Файлы, которые будут кэшироваться
+// Файлы, которые будут кэшироваться при установке
 const CACHE_ASSETS = [
     '/money3/',
     '/money3/index.html',
@@ -23,10 +23,15 @@ const CACHE_ASSETS = [
 
 // Устанавливаем кэш
 self.addEventListener('install', event => {
+    console.log('[ServiceWorker] Установка');
+    
+    // Принудительно активируем новый service worker сразу
+    self.skipWaiting();
+    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('Кэшируем файлы...');
+                console.log('[ServiceWorker] Кэшируем файлы...');
                 return cache.addAll(CACHE_ASSETS);
             })
     );
@@ -34,12 +39,17 @@ self.addEventListener('install', event => {
 
 // Активируем воркер и удаляем старые кэши
 self.addEventListener('activate', event => {
+    console.log('[ServiceWorker] Активация');
+    
+    // Берем контроль над всеми клиентами сразу
+    event.waitUntil(clients.claim());
+    
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => {
                     if (cache !== CACHE_NAME) {
-                        console.log('Удаляем старый кэш:', cache);
+                        console.log('[ServiceWorker] Удаляем старый кэш:', cache);
                         return caches.delete(cache);
                     }
                 })
@@ -54,12 +64,38 @@ self.addEventListener('fetch', event => {
     if (event.request.url.includes('/api/')) {
         return;
     }
-
+    
+    // Не кэшируем запросы с методом, отличным от GET
+    if (event.request.method !== 'GET') {
+        return;
+    }
+    
+    // Стратегия Stale-While-Revalidate
+    // Сначала показываем из кэша, но обновляем кэш свежими данными
     event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request);
-            })
+        caches.open(CACHE_NAME).then(cache => {
+            return cache.match(event.request).then(cachedResponse => {
+                const fetchPromise = fetch(event.request)
+                    .then(networkResponse => {
+                        // Если получен успешный ответ, обновляем кэш
+                        if (networkResponse.ok) {
+                            cache.put(event.request, networkResponse.clone());
+                        }
+                        return networkResponse;
+                    })
+                    .catch(error => {
+                        console.error('[ServiceWorker] Ошибка при получении ответа:', error);
+                        // Возвращаем ошибку, чтобы цепочка промисов не прерывалась
+                        return new Response('Network error', { 
+                            status: 500, 
+                            headers: new Headers({ 'Content-Type': 'text/plain' })
+                        });
+                    });
+                
+                // Возвращаем закэшированный ответ или результат запроса к сети
+                return cachedResponse || fetchPromise;
+            });
+        })
     );
 });
 
