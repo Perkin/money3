@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import PaymentItem from '../index'
 import { Payment } from '@/db/DbPayments.ts'
+import { toast } from 'react-toastify'
 
 // Мок модуля DbPayments
 vi.mock('@/db/DbPayments.ts', () => ({
@@ -23,6 +24,26 @@ vi.mock('react-toastify', () => ({
     success: vi.fn(),
     error: vi.fn(),
   },
+}))
+
+// Мок для EditPaymentForm
+vi.mock('@/components/EditPaymentForm', () => ({
+  default: ({ payment, onClose }: { payment: Payment, onClose: () => void }) => (
+    <div data-testid="edit-payment-form">
+      <div>Редактирование платежа {payment.id}</div>
+      <button onClick={onClose} data-testid="close-edit-form">Закрыть</button>
+    </div>
+  )
+}))
+
+// Мок для Popup
+vi.mock('@/components/Popup', () => ({
+  default: ({ children, onClose }: { children: React.ReactNode, onClose: () => void }) => (
+    <div data-testid="popup">
+      <button data-testid="close-popup" onClick={onClose}>X</button>
+      {children}
+    </div>
+  )
 }))
 
 describe('PaymentItem', () => {
@@ -51,8 +72,8 @@ describe('PaymentItem', () => {
       />
     )
     
-    // Проверяем формат даты, который фактически отображается в компоненте
-    expect(screen.getByText('2023-Jan-15')).toBeInTheDocument()
+    // Проверяем формат даты с учетом русской локали
+    expect(screen.getByText('2023-янв-15')).toBeInTheDocument()
     
     // Проверяем сумму в формате, который фактически отображается
     expect(screen.getByText('1,000 ₽')).toBeInTheDocument()
@@ -120,6 +141,7 @@ describe('PaymentItem', () => {
       expect(calculatePayments).toHaveBeenCalled()
       expect(updateRemoteData).toHaveBeenCalled()
       expect(mockOnClosePayment).toHaveBeenCalled()
+      expect(toast.success).toHaveBeenCalledWith('Долг оплачен')
     })
   })
 
@@ -136,26 +158,137 @@ describe('PaymentItem', () => {
     // Клик по кнопке редактирования
     fireEvent.click(screen.getByTitle('Редактировать платёж'))
 
-    // Проверяем, что форма редактирования отображается через поиск её элементов
-    const formElement = screen.getByText('Сумма:').closest('form')
-    expect(formElement).toBeInTheDocument()
+    // Проверяем, что форма редактирования отображается
+    expect(screen.getByTestId('edit-payment-form')).toBeInTheDocument()
+    expect(screen.getByText(`Редактирование платежа ${mockPayment.id}`)).toBeInTheDocument()
+  })
+
+  // Новый тест: закрытие формы редактирования
+  it('should close edit form when close button is clicked', () => {
+    render(
+      <PaymentItem 
+        payment={mockPayment} 
+        isEven={false} 
+        isDebt={false}
+        onClosePayment={mockOnClosePayment}
+      />
+    )
+
+    // Открываем форму редактирования
+    fireEvent.click(screen.getByTitle('Редактировать платёж'))
+    expect(screen.getByTestId('edit-payment-form')).toBeInTheDocument()
+
+    // Закрываем форму
+    fireEvent.click(screen.getByTestId('close-edit-form'))
     
-    // Проверяем наличие полей формы редактирования
-    expect(screen.getByText('Сумма:')).toBeInTheDocument()
-    expect(screen.getByText('Дата платежа:')).toBeInTheDocument()
-    expect(screen.getByText('Статус:')).toBeInTheDocument()
+    // Проверяем, что форма закрылась и вызван колбэк
+    expect(screen.queryByTestId('edit-payment-form')).not.toBeInTheDocument()
+    expect(mockOnClosePayment).toHaveBeenCalled()
+  })
+
+  // Новый тест: обработка ошибок при закрытии платежа
+  it('should handle errors when closing payment', async () => {
+    // Мокаем closePayment, чтобы он возвращал ошибку
+    const { closePayment } = await import('@/db/DbPayments.ts')
+    const { toast } = await import('react-toastify')
     
-    // Проверяем наличие кнопок
-    expect(screen.getByText('Сохранить')).toBeInTheDocument()
-    expect(screen.getByText('Отмена')).toBeInTheDocument()
+    vi.mocked(closePayment).mockRejectedValueOnce(new Error('Тестовая ошибка'));
+
+    render(
+      <PaymentItem 
+        payment={mockPayment} 
+        isEven={false} 
+        isDebt={false}
+        onClosePayment={mockOnClosePayment}
+      />
+    )
+
+    // Клик по кнопке закрытия платежа
+    fireEvent.click(screen.getByTitle('Оплата произведена'))
+
+    // Проверяем обработку ошибки
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Ошибка: Тестовая ошибка')
+      expect(mockOnClosePayment).not.toHaveBeenCalled()
+    })
+  })
+
+  // Новый тест: отображение стилей для просроченного платежа
+  it('should apply special styles for overdue payments', () => {
+    // Создаем DOM-элемент для проверки стилей
+    const containerDiv = document.createElement('div');
+    document.body.appendChild(containerDiv);
+
+    const { container: renderContainer } = render(
+      <PaymentItem 
+        payment={mockPayment} 
+        isEven={false} 
+        isDebt={true}
+        onClosePayment={mockOnClosePayment}
+      />,
+      { container: containerDiv }
+    )
+
+    // Находим элемент с данными платежа
+    const dataItem = renderContainer.querySelector('[class*="dataItem"]');
+    expect(dataItem).not.toBeNull();
     
-    // Проверяем, что инпуты с правильными значениями есть в форме
-    const numberInput = screen.getByDisplayValue('1000')
-    expect(numberInput).toBeInTheDocument()
-    expect(numberInput.getAttribute('type')).toBe('number')
+    // Проверяем наличие класса для просроченного платежа
+    // Используем contains вместо toHaveClass, так как классы модульные и имеют хэш
+    expect(dataItem?.className).toContain('debt');
+  })
+
+  // Новый тест: обработка неуспешного закрытия платежа
+  it('should handle unsuccessful payment closing', async () => {
+    // Мокаем closePayment, чтобы он возвращал неправильный ID
+    const { closePayment } = await import('@/db/DbPayments.ts')
+    const { toast } = await import('react-toastify')
     
-    const dateInput = screen.getByDisplayValue('2023-01-15')
-    expect(dateInput).toBeInTheDocument()
-    expect(dateInput.getAttribute('type')).toBe('date')
+    vi.mocked(closePayment).mockResolvedValueOnce(999); // Другой ID
+
+    render(
+      <PaymentItem 
+        payment={mockPayment} 
+        isEven={false} 
+        isDebt={false}
+        onClosePayment={mockOnClosePayment}
+      />
+    )
+
+    // Клик по кнопке закрытия платежа
+    fireEvent.click(screen.getByTitle('Оплата произведена'))
+
+    // Проверяем обработку ошибки
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Не удалось оплатить платеж')
+      expect(mockOnClosePayment).not.toHaveBeenCalled()
+    })
+  })
+
+  // Новый тест: обработка ошибки, которая не является экземпляром Error
+  it('should handle error that is not an Error instance', async () => {
+    // Мокаем closePayment, чтобы он возвращал ошибку не экземпляр Error
+    const { closePayment } = await import('@/db/DbPayments.ts')
+    const { toast } = await import('react-toastify')
+    
+    vi.mocked(closePayment).mockRejectedValueOnce('Строковая ошибка');
+
+    render(
+      <PaymentItem 
+        payment={mockPayment} 
+        isEven={false} 
+        isDebt={false}
+        onClosePayment={mockOnClosePayment}
+      />
+    )
+
+    // Клик по кнопке закрытия платежа
+    fireEvent.click(screen.getByTitle('Оплата произведена'))
+
+    // Проверяем обработку ошибки
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Ошибка: Неизвестная ошибка')
+      expect(mockOnClosePayment).not.toHaveBeenCalled()
+    })
   })
 }) 

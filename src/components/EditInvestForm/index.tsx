@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import styles from './index.module.css';
 import { toast } from 'react-toastify';
 import { Invest, updateInvest } from '@/db/DbInvests.ts';
 import { updateRemoteData } from '@/db/DbUtils.ts';
-import { formatDate } from '@/utils/formatUtils.ts';
 
 interface EditInvestFormProps {
     invest: Invest;
@@ -44,8 +43,9 @@ const EditInvestForm = ({ invest, onClose }: EditInvestFormProps) => {
     return (
         <form className={styles.editInvestForm} ref={formRef} onSubmit={handleSubmit}>
             <div className={styles.formRow}>
-                <label>Сумма:</label>
+                <label htmlFor="money-input">Сумма:</label>
                 <input 
+                    id="money-input"
                     type="number" 
                     value={money} 
                     onChange={(e) => setMoney(parseFloat(e.target.value))} 
@@ -53,8 +53,9 @@ const EditInvestForm = ({ invest, onClose }: EditInvestFormProps) => {
                 />
             </div>
             <div className={styles.formRow}>
-                <label>Дата создания:</label>
+                <label htmlFor="date-input">Дата создания:</label>
                 <input 
+                    id="date-input"
                     type="date" 
                     value={formatDateForInput(createdDate)} 
                     onChange={(e) => setCreatedDate(new Date(e.target.value))} 

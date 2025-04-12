@@ -19,7 +19,7 @@ const SettingsForm = () => {
             await checkForDebts();
         } else {
             setNotificationStatus('denied');
-            toast.warn('Разрешение на уведомления не получено');
+            toast.error('Разрешение на уведомления не получено');
         }
     };
 

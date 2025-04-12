@@ -23,7 +23,7 @@ const EditPaymentForm = ({ payment, onClose }: EditPaymentFormProps) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!money || !paymentDate) {
+        if (!money || money <= 0 || !paymentDate) {
             toast.error('Заполните все поля');
             return;
         }

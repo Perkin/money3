@@ -16,8 +16,14 @@ export const checkForDebts = async (): Promise<void> => {
         // Получаем регистрацию Service Worker
         const registration = await navigator.serviceWorker.ready;
         
+        // Проверяем, активен ли Service Worker
+        if (!registration.active) {
+            console.log('Service Worker не активен');
+            return;
+        }
+        
         // Отправляем сообщение Service Worker для проверки долгов
-        registration.active?.postMessage({ type: 'check-debts' });
+        registration.active.postMessage({ type: 'check-debts' });
         
         console.log('Запрос на проверку долгов отправлен');
     } catch (error) {

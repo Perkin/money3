@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import TotalItem from '../index';
-import { formatMoney } from '@/utils/formatUtils.ts';
 
 describe('TotalItem', () => {
     it('should render with title and amount', () => {
         const amount = 1000;
-        const formatted = formatMoney(amount);
         render(<TotalItem amount={amount} title="Итого" isDebt={false} />);
         
         expect(screen.getByText('Итого')).toBeInTheDocument();
