@@ -8,8 +8,13 @@ export default defineConfig({
         outDir: 'docs', // Билд будет сразу в папку docs/ для GitHub Pages
         rollupOptions: {
             output: {
+                // Добавляем хэширование имен файлов для всех типов ресурсов
+                entryFileNames: 'assets/[name].[hash].js',
+                chunkFileNames: 'assets/[name].[hash].js',
+                assetFileNames: 'assets/[name].[hash].[ext]',
                 manualChunks: {
-                    react: ['react', 'react-dom']
+                    react: ['react', 'react-dom'],
+                    vendor: ['react-toastify', 'idb']
                 },
             },
         },

@@ -34,8 +34,29 @@ declare global {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
-            const registration = await navigator.serviceWorker.register('/money3/service-worker.js');
+            const registration = await navigator.serviceWorker.register('/money3/service-worker.js', {
+                updateViaCache: 'none' // Запрещаем использовать HTTP-кэш для service worker
+            });
             console.log('ServiceWorker успешно зарегистрирован:', registration.scope);
+            
+            // Проверка и обработка обновлений
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (!newWorker) return;
+                
+                console.log('Обнаружена новая версия ServiceWorker');
+                
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('Новый Service Worker установлен и готов к использованию');
+                        
+                        // Можно добавить уведомление для пользователя
+                        if (confirm('Доступна новая версия приложения. Обновить сейчас?')) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            });
             
             // Запрашиваем разрешение на уведомления
             if ('Notification' in window) {
