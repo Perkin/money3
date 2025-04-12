@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getDB } from '../Db';
 import * as idb from 'idb';
 
+// Мок для глобального объекта window.DB_CONFIG
+Object.defineProperty(window, 'DB_CONFIG', {
+  value: {
+    DB_NAME: 'money',
+    DB_VERSION: 1
+  },
+  writable: true
+});
+
 // Мок для idb
 vi.mock('idb', () => ({
     openDB: vi.fn().mockResolvedValue({})

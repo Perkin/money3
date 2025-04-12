@@ -1,7 +1,8 @@
 import { openDB, IDBPDatabase } from 'idb';
 
 // Получаем конфигурацию БД из глобальной переменной или используем значения по умолчанию
-const { DB_NAME, DB_VERSION } = (window as any).DB_CONFIG;
+const defaultConfig = { DB_NAME: 'money', DB_VERSION: 1 };
+const { DB_NAME, DB_VERSION } = (window as any).DB_CONFIG || defaultConfig;
 
 let dbInstance: IDBPDatabase | null = null;
 
