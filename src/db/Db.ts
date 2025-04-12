@@ -1,13 +1,14 @@
 import { openDB, IDBPDatabase } from 'idb';
 
-const DB_NAME = 'money';
-const DB_VERSION = 8;
+// Получаем конфигурацию БД из глобальной переменной или используем значения по умолчанию
+const { DB_NAME, DB_VERSION } = (window as any).DB_CONFIG;
+
 let dbInstance: IDBPDatabase | null = null;
 
 async function getDB(): Promise<IDBPDatabase> {
     if (!dbInstance) {
         dbInstance = await openDB(DB_NAME, DB_VERSION, {
-            upgrade(db, oldVersion, newVersion, transaction) {
+            upgrade(db, _oldVersion, _newVersion, transaction) {
                 // Создаем или получаем хранилище 'invests'
                 let invests;
                 if (!db.objectStoreNames.contains('invests')) {
@@ -39,7 +40,6 @@ async function getDB(): Promise<IDBPDatabase> {
                     payments.createIndex('isPayedIdx', 'isPayed', { unique: false });
                 }
             },
-
             blocked() {
                 console.log('База данных заблокирована другой вкладкой');
             },
@@ -48,11 +48,11 @@ async function getDB(): Promise<IDBPDatabase> {
             },
             terminated() {
                 console.log('База данных была неожиданно закрыта');
-            },
+            }
         });
     }
-
     return dbInstance;
 }
+
 export { getDB };
 

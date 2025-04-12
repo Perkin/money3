@@ -9,6 +9,7 @@ import { exportData, syncUpdates } from '@/db/DbUtils.ts';
 import Popup from '../Popup';
 import LoginForm from '../LoginForm';
 import RegisterForm from '../RegisterForm';
+import SettingsForm from '../SettingsForm';
 
 const Menu = () => {
     const { user, logout } = useUser();
@@ -43,6 +44,7 @@ const Menu = () => {
     const [isImportPopupActive, setImportPopupActive] = useState(false);
     const [showLoginForm, setShowLoginForm] = useState(false);
     const [showRegisterForm, setShowRegisterForm] = useState(false);
+    const [showSettingsForm, setShowSettingsForm] = useState(false);
 
     const handleExport = async () => {
         try {
@@ -56,6 +58,11 @@ const Menu = () => {
     const handleImport = () => {
         setMenuVisible(false);
         setImportPopupActive(true);
+    }
+
+    const handleSettings = () => {
+        setMenuVisible(false);
+        setShowSettingsForm(true);
     }
 
     const handleSyncUpdates = async () => {
@@ -80,6 +87,7 @@ const Menu = () => {
                 <div className={styles.menuDropdownContent} ref={dropdownContentRef}>
                     <MenuButton onClick={handleExport}>Экспорт</MenuButton>
                     <MenuButton onClick={handleImport}>Импорт</MenuButton>
+                    <MenuButton onClick={handleSettings}>Настройки</MenuButton>
                     {user
                         ? (
                             <>
@@ -110,6 +118,11 @@ const Menu = () => {
                         setShowRegisterForm(false);
                         setMenuVisible(false);
                     }} />
+                </Popup>
+            )}
+            {showSettingsForm && (
+                <Popup onClose={() => setShowSettingsForm(false)}>
+                    <SettingsForm />
                 </Popup>
             )}
             {isImportPopupActive && (
