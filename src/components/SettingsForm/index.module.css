@@ -142,4 +142,33 @@
 
 .testButton:hover {
     background-color: #d35400;
+}
+
+/* Стили для блока информации о приложении */
+.appInfoBlock {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: #333;
+    border-radius: 4px;
+    color: #fff;
+}
+
+.appInfoRow {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.appInfoRow:last-child {
+    margin-bottom: 0;
+}
+
+.appInfoLabel {
+    font-weight: bold;
+    color: #999;
+}
+
+.appInfoValue {
+    color: #AF4C50;
+    font-weight: 500;
 } 

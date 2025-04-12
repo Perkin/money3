@@ -1,11 +1,15 @@
 {
-    "name": "Money Debt",
+    "name": "money-debt",
     "private": true,
-    "version": "0.0.1",
+    "version": "1.0.3",
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "version:update": "node build-version.js",
+        "build": "npm run version:update && vite build",
+        "build:patch": "node build-version.js patch && vite build",
+        "build:minor": "node build-version.js minor && vite build",
+        "build:major": "node build-version.js major && vite build",
         "preview": "vite preview",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",

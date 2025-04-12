@@ -1,5 +1,7 @@
+// Текущая версия приложения
+const APP_VERSION = '1.0.3';
 // Имя кэша, чтобы различать версии
-const CACHE_NAME = 'money3-cache-v15';
+const CACHE_NAME = 'money3-cache-v' + APP_VERSION;
 
 // Резервные значения для конфигурации БД, если db-config.js не загрузится
 const DEFAULT_DB_CONFIG = {
@@ -33,7 +35,11 @@ function sendMessageToClients(message) {
 // Устанавливаем кэш
 self.addEventListener('install', event => {
     console.log('[ServiceWorker] Установка');
-    sendMessageToClients({ type: 'status', message: 'Установка Service Worker...' });
+    sendMessageToClients({ 
+        type: 'status', 
+        message: 'Установка Service Worker...',
+        version: APP_VERSION
+    });
     
     // Принудительно активируем новый service worker сразу
     self.skipWaiting();
@@ -42,11 +48,19 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[ServiceWorker] Кэшируем файлы...');
-                sendMessageToClients({ type: 'status', message: 'Кэширование файлов...' });
+                sendMessageToClients({ 
+                    type: 'status', 
+                    message: 'Кэширование файлов...',
+                    version: APP_VERSION
+                });
                 return cache.addAll(CACHE_ASSETS);
             })
             .then(() => {
-                sendMessageToClients({ type: 'status', message: 'Кэширование завершено' });
+                sendMessageToClients({ 
+                    type: 'status', 
+                    message: 'Кэширование завершено',
+                    version: APP_VERSION
+                });
             })
     );
 });
@@ -54,7 +68,11 @@ self.addEventListener('install', event => {
 // Активируем воркер и удаляем старые кэши
 self.addEventListener('activate', event => {
     console.log('[ServiceWorker] Активация');
-    sendMessageToClients({ type: 'status', message: 'Активация Service Worker...' });
+    sendMessageToClients({ 
+        type: 'status', 
+        message: 'Активация Service Worker...',
+        version: APP_VERSION 
+    });
     
     // Берем контроль над всеми клиентами сразу
     event.waitUntil(
@@ -65,15 +83,26 @@ self.addEventListener('activate', event => {
                     cacheNames.map(cache => {
                         if (cache !== CACHE_NAME) {
                             console.log('[ServiceWorker] Удаляем старый кэш:', cache);
-                            sendMessageToClients({ type: 'status', message: 'Удаление старого кэша...' });
+                            sendMessageToClients({ 
+                                type: 'status', 
+                                message: 'Удаление старого кэша...',
+                                version: APP_VERSION 
+                            });
                             return caches.delete(cache);
                         }
                     })
                 );
             })
         ]).then(() => {
-            sendMessageToClients({ type: 'status', message: 'Service Worker активирован' });
-            sendMessageToClients({ type: 'activated' });
+            sendMessageToClients({ 
+                type: 'status', 
+                message: 'Service Worker активирован',
+                version: APP_VERSION 
+            });
+            sendMessageToClients({ 
+                type: 'activated', 
+                version: APP_VERSION 
+            });
         })
     );
 });
@@ -108,7 +137,8 @@ self.addEventListener('fetch', event => {
                         sendMessageToClients({ 
                             type: 'error', 
                             message: 'Ошибка сети при получении ресурса',
-                            url: event.request.url 
+                            url: event.request.url,
+                            version: APP_VERSION
                         });
                         
                         // Возвращаем ошибку, чтобы цепочка промисов не прерывалась
@@ -133,6 +163,12 @@ self.addEventListener('message', event => {
         checkForNewDebts();
     } else if (event.data && event.data.type === 'skipWaiting') {
         self.skipWaiting();
+    } else if (event.data && event.data.type === 'get-version') {
+        // Отправляем информацию о версии
+        event.source.postMessage({
+            type: 'app-version',
+            version: APP_VERSION
+        });
     }
 });
 
@@ -222,7 +258,6 @@ async function checkForNewDebts() {
         });
         
         console.log('Найдено долгов на сегодня:', todayDebts.length);
-        console.table(todayDebts);
         
         // Если есть новые долги, отправляем уведомление
         if (todayDebts.length > 0) {

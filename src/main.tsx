@@ -58,7 +58,10 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
         console.log('Получено сообщение от ServiceWorker:', event.data);
         
-        if (event.data && event.data.type === 'status') {
+        if (event.data && event.data.type === 'app-version') {
+            // Просто выводим версию в консоль, но не обновляем страницу
+            console.log(`Service Worker версия: ${event.data.version}`);
+        } else if (event.data && event.data.type === 'status') {
             updateLoadingStatus(event.data.message);
         } else if (event.data && event.data.type === 'activated') {
             // Когда Service Worker активирован, показываем приложение
@@ -95,12 +98,11 @@ if ('serviceWorker' in navigator) {
                         console.log('Новый Service Worker установлен и готов к использованию');
                         updateLoadingStatus('Обновление готово к установке');
                         
-                        // Автоматически перезагружаем страницу после небольшой задержки,
-                        // чтобы применить новую версию
-                        setTimeout(() => {
+                        // Показываем пользователю сообщение с возможностью обновления, вместо автоматического обновления
+                        if (confirm('Доступна новая версия приложения. Обновить сейчас?')) {
                             updateLoadingStatus('Применяю обновление...');
                             window.location.reload();
-                        }, 1000);
+                        }
                     } else if (newWorker.state === 'installing') {
                         updateLoadingStatus('Установка обновления...');
                     } else if (newWorker.state === 'activated') {

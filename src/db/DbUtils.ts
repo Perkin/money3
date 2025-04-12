@@ -3,7 +3,6 @@ import { getInvests, InvestFilter } from './DbInvests';
 import { getPayments, addPayment, PaymentFilter } from './DbPayments';
 import { toast } from 'react-toastify';
 import { get, post } from '@/utils/networkUtils';
-import { API_URL } from '@/config.ts';
 
 interface ImportInvest {
     id?: number;
