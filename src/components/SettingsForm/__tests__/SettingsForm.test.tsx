@@ -35,8 +35,8 @@ describe('SettingsForm', () => {
     render(<SettingsForm />);
     
     expect(screen.getByRole('heading', { name: /настройки/i })).toBeInTheDocument();
-    // Ищем label вместо текста
-    expect(screen.getByText('Уведомления')).toBeInTheDocument();
+    // Ищем правильный текст
+    expect(screen.getByText('Управление уведомлениями')).toBeInTheDocument();
     expect(screen.getByText(/статус:/i)).toBeInTheDocument();
   });
 

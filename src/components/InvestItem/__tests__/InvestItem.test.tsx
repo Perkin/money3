@@ -8,7 +8,6 @@ import * as DbInvests from '@/db/DbInvests'
 import * as DbPayments from '@/db/DbPayments'
 import * as DbUtils from '@/db/DbUtils'
 import { toast } from 'react-toastify'
-import * as formatUtils from '@/utils/formatUtils'
 
 // Мокаем только основные функции, используемые в этом тесте
 // Не дублируем моки, которые уже есть в глобальном setup.ts

@@ -44,6 +44,11 @@ describe('debtCheckUtils', () => {
         }
       });
       
+      // Мок для Notification
+      global.Notification = {
+        permission: 'granted'
+      } as any;
+      
       // Мок для console.log
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
@@ -51,10 +56,44 @@ describe('debtCheckUtils', () => {
       await checkForDebts();
       
       // Проверяем, что postMessage был вызван с правильным аргументом
-      expect(postMessageMock).toHaveBeenCalledWith({ type: 'check-debts' });
+      expect(postMessageMock).toHaveBeenCalledWith({ 
+        type: 'check-debts',
+        force: false
+      });
       
       // Проверяем, что сообщение было залогировано
-      expect(consoleSpy).toHaveBeenCalledWith('Запрос на проверку долгов отправлен');
+      expect(consoleSpy).toHaveBeenCalledWith('Запрос на проверку долгов отправлен через Service Worker');
+    });
+    
+    it('должен передавать флаг force в сообщение service worker', async () => {
+      // Мок для postMessage
+      const postMessageMock = vi.fn();
+      
+      // Мок для service worker
+      Object.defineProperty(global.navigator, 'serviceWorker', {
+        configurable: true,
+        value: {
+          ready: Promise.resolve({
+            active: {
+              postMessage: postMessageMock
+            }
+          })
+        }
+      });
+      
+      // Мок для Notification
+      global.Notification = {
+        permission: 'granted'
+      } as any;
+      
+      // Вызываем функцию с параметром force=true
+      await checkForDebts(true);
+      
+      // Проверяем, что postMessage был вызван с правильным аргументом
+      expect(postMessageMock).toHaveBeenCalledWith({ 
+        type: 'check-debts',
+        force: true
+      });
     });
     
     it('должен обрабатывать отсутствие поддержки service worker', async () => {
@@ -62,14 +101,19 @@ describe('debtCheckUtils', () => {
       // @ts-ignore - игнорируем ошибки TypeScript для теста
       delete global.navigator.serviceWorker;
       
-      // Мок для console.error
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      // Мок для Notification
+      global.Notification = {
+        permission: 'granted'
+      } as any;
+      
+      // Мок для console.log
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
       // Вызываем функцию
       await checkForDebts();
       
-      // Проверяем, что было выведено сообщение об ошибке
-      expect(consoleSpy).toHaveBeenCalledWith('Service Worker не поддерживается');
+      // Проверяем сообщение в логе
+      expect(consoleSpy).toHaveBeenCalledWith('Запрос на проверку долгов выполнен через обычные уведомления');
     });
     
     it('должен обрабатывать ошибки при отправке сообщения service worker', async () => {
@@ -81,14 +125,20 @@ describe('debtCheckUtils', () => {
         }
       });
       
-      // Мок для console.error
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      // Мок для Notification
+      global.Notification = {
+        permission: 'granted'
+      } as any;
+      
+      // Мок для console.warn и console.error
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
       // Вызываем функцию
       await checkForDebts();
       
-      // Проверяем, что ошибка была залогирована
-      expect(consoleSpy).toHaveBeenCalledWith('Ошибка при проверке долгов:', expect.any(Error));
+      // Проверяем, что предупреждение было залогировано
+      expect(warnSpy).toHaveBeenCalledWith('Service Worker не активен, используем обычные уведомления:', expect.any(Error));
     });
     
     it('должен обрабатывать отсутствие активного service worker', async () => {
@@ -102,14 +152,19 @@ describe('debtCheckUtils', () => {
         }
       });
       
-      // Мок для console.log
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      // Мок для Notification
+      global.Notification = {
+        permission: 'granted'
+      } as any;
+      
+      // Мок для console.log и console.warn
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
       // Вызываем функцию
       await checkForDebts();
       
-      // Проверяем, что сообщение было залогировано
-      expect(consoleSpy).toHaveBeenCalledWith('Service Worker не активен');
+      // Проверяем сообщение в логе
+      expect(logSpy).toHaveBeenCalledWith('Запрос на проверку долгов выполнен через обычные уведомления');
     });
   });
   
