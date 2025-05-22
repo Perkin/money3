@@ -1,5 +1,5 @@
 // Текущая версия приложения
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 // Имя кэша, чтобы различать версии
 const CACHE_NAME = 'money3-cache-v' + APP_VERSION;
 
@@ -94,9 +94,7 @@ self.addEventListener('activate', event => {
                         }
                     })
                 );
-            }),
-            // Пытаемся загрузить состояние уведомлений
-            loadNotificationState()
+            })
         ]).then(() => {
             sendMessageToClients({ 
                 type: 'status', 
