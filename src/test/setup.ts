@@ -29,7 +29,7 @@ class MockIDBDatabase {
 }
 
 // Мок для глобальных объектов, которые нужны для тестов
-global.indexedDB = {
+globalThis.indexedDB = {
     open: vi.fn().mockReturnValue({
         result: new MockIDBDatabase(),
         transaction: vi.fn().mockReturnThis(),
@@ -43,7 +43,7 @@ global.indexedDB = {
 } as any;
 
 // Мок для IDBKeyRange
-global.IDBKeyRange = {
+globalThis.IDBKeyRange = {
     lowerBound: vi.fn().mockReturnValue('lower-bound-range'),
     upperBound: vi.fn().mockReturnValue('upper-bound-range'),
     bound: vi.fn().mockReturnValue('bound-range'),
@@ -71,10 +71,10 @@ class MockLocalStorage {
     }
 }
 
-global.localStorage = new MockLocalStorage() as any;
+globalThis.localStorage = new MockLocalStorage() as any;
 
 // Мок для fetch API
-global.fetch = vi.fn().mockResolvedValue({
+globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
     json: vi.fn().mockResolvedValue({}),
     status: 200,
@@ -129,22 +129,22 @@ declare global {
 // Настраиваем локализацию перед всеми тестами и восстанавливаем после
 beforeAll(() => {
     // @ts-ignore - расширяем global динамически
-    global.restoreLocalization = setupLocalization();
+    globalThis.restoreLocalization = setupLocalization();
 });
 
 afterAll(() => {
     // @ts-ignore - restoreLocalization добавлено динамически
-    if (global.restoreLocalization) {
+    if (globalThis.restoreLocalization) {
         // @ts-ignore
-        global.restoreLocalization();
+        globalThis.restoreLocalization();
     }
 });
 
 // Мок для window.confirm
-global.confirm = vi.fn().mockReturnValue(true);
+globalThis.confirm = vi.fn().mockReturnValue(true);
 
 // Мок для window.dispatchEvent
-global.dispatchEvent = vi.fn();
+globalThis.dispatchEvent = vi.fn();
 
 // Подавление предупреждений об act() в консоли
 console.error = vi.fn(); 
