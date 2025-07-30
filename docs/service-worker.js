@@ -1,5 +1,5 @@
 // Текущая версия приложения
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.1.0';
 // Имя кэша, чтобы различать версии
 const CACHE_NAME = 'money3-cache-v' + APP_VERSION;
 
@@ -203,97 +203,7 @@ async function getPayments() {
     }
 }
 
-// Функция для проверки новых долгов
-async function checkForNewDebts() {
-    try {
-        // Получаем только неоплаченные платежи
-        const unpaidPayments = await getPayments();
-        console.log('Получено неоплаченных платежей:', unpaidPayments.length);
-        
-        // Получаем сегодняшнюю дату (начало дня)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Конец сегодняшнего дня
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        // Фильтруем платежи, которые становятся должными сегодня
-        // Поскольку мы уже получили только неоплаченные, проверяем только дату
-        const todayDebts = unpaidPayments.filter(payment => {
-            const paymentDate = new Date(payment.paymentDate);
-            paymentDate.setHours(0, 0, 0, 0);
-            
-            return paymentDate.getTime() >= today.getTime() && 
-                   paymentDate.getTime() < tomorrow.getTime();
-        });
-        
-        console.log('Найдено долгов на сегодня:', todayDebts.length);
-        
-        if (todayDebts.length > 0) {
-            const totalDebt = todayDebts.reduce((sum, payment) => sum + payment.money, 0);
-            
-            // Отправляем уведомление только о новых долгах
-            self.registration.showNotification('Новые платежи на сегодня', {
-                body: `У вас ${todayDebts.length} новых платежей на сумму ${totalDebt.toLocaleString()} ₽`,
-                icon: '/money3/icon-192x192.png',
-                badge: '/money3/favicon-32x32.png',
-                tag: 'new-debts',
-                vibrate: [200, 100, 200],
-                data: {
-                    dateOfArrival: Date.now(),
-                    debtCount: todayDebts.length,
-                    debtAmount: totalDebt
-                },
-                actions: [
-                    {
-                        action: 'open-app',
-                        title: 'Открыть'
-                    }
-                ]
-            });
-        } else {
-            console.log('Долгов на сегодня не найдено');
-        }
-    } catch (error) {
-        console.error('Ошибка при проверке долгов:', error);
-    }
-}
-
-// Обработка клика по уведомлению
-self.addEventListener('notificationclick', event => {
-    event.notification.close();
-    
-    if (event.action === 'open-app') {
-        // Открываем приложение
-        clients.openWindow('/money3/');
-    } else {
-        // Действие по умолчанию - также открываем приложение
-        clients.openWindow('/money3/');
-    }
-});
-
 // Обработка сообщений от основного скрипта
 self.addEventListener('message', event => {
     console.log('[ServiceWorker] Получено сообщение:', event.data);
-    
-    if (event.data && event.data.type === 'check-debts') {
-        checkForNewDebts();
-    } else if (event.data && event.data.type === 'skipWaiting') {
-        self.skipWaiting();
-    }
-});
-
-// Обработка периодической синхронизации для проверки долгов
-self.addEventListener('periodicsync', event => {
-    if (event.tag === 'check-debts') {
-        event.waitUntil(checkForNewDebts());
-    }
-});
-
-// Обработка события синхронизации
-self.addEventListener('sync', event => {
-    if (event.tag === 'check-debts') {
-        event.waitUntil(checkForNewDebts());
-    }
 });
